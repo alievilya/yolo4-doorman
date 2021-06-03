@@ -135,7 +135,7 @@ def main(yolo):
             door_array = select_object(first_frame)[0]
             print(door_array)
         else:
-            all_doors = read_door_info('data_files/doors_info.csv')
+            all_doors = read_door_info('data_files/doors_info.json')
             door_array = all_doors[video_name]
 
     border_door = door_array[3]

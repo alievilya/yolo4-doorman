@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division, print_function, absolute_import
+import json
 
 import warnings
 from collections import OrderedDict
@@ -90,7 +91,7 @@ class Counter:
     def get_out(self):
         self.counter_out += 1
 
-    def show_counter(self):
+    def return_counter(self):
         return self.counter_in, self.counter_out
 
     def return_total_count(self):
@@ -116,13 +117,22 @@ def check_gpu():
 
 def main(yolo):
     # Definition of the parameters
+    with open("cfg/detection_tracker_cfg.json") as detection_config:
+        detect_config = json.load(detection_config)
+    with open("data_files/doors_info.json") as doors_config:
+        doors_config = json.load(doors_config)
     max_cosine_distance = 0.2
     nn_budget = None
     nms_max_overlap = 1.0
-    output_format = 'mp4'
+    output_format = '.mp4'
+    input_format = '.mp4'
+
+
+    model_filename = detect_config["tracking_model"]
+    input_folder, output_folder = detect_config["input_folder"], detect_config["output_folder"]
+    meta_folder = detect_config["meta_folder"]
 
     # Deep SORT
-    model_filename = 'model_data/mars-small128.pb'
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
 
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
@@ -135,18 +145,22 @@ def main(yolo):
     fpeses = []
 
     check_gpu()
-    video_name = 'test1.mp4'
-
-    print("opening video: {}".format(video_name))
-    file_path = join('data_files/', video_name)
-    # file_path = "rtsp://admin:admin@192.168.1.52:554/1/h264major"
-    output_name = 'save_data/out_' + video_name[0:-3] + output_format
+    video_name = 'mask3'
+    video_path = video_name + input_format
+    print("opening video: {}".format(video_path))
+    full_video_path = join(input_folder, video_path)
+    # full_video_path = "rtsp://admin:admin@192.168.1.52:554/1/h264major"
+    output_name = output_folder + 'out_' + video_name + output_format
+    meta_name = meta_folder + video_name + ".json"
+    with open(meta_name) as meta_config_json:
+        meta_config = json.load(meta_config_json)
+    camera_id = meta_config["camera_id"]
     counter = Counter(counter_in=0, counter_out=0, track_id=0)
 
     if asyncVideo_flag:
-        video_capture = VideoCaptureAsync(file_path)
+        video_capture = VideoCaptureAsync(full_video_path)
     else:
-        video_capture = cv2.VideoCapture(file_path)
+        video_capture = cv2.VideoCapture(full_video_path)
 
     if asyncVideo_flag:
         video_capture.start()
@@ -158,16 +172,18 @@ def main(yolo):
 
     if writeVideo_flag:
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(output_name, fourcc, 15, (w, h))
+        out = cv2.VideoWriter(output_name, fourcc, 25, (w, h))
 
-    left_array = [0, 0, w / 2, h]
+    door_array = [0, 0, w / 2, h]
     fps = 0.0
-    fps_imutils = imutils.video.FPS().start()
 
-    rect_left = Rectangle(left_array[0], left_array[1], left_array[2], left_array[3])
+    door_array = doors_config["{}".format(camera_id)]
 
-    border_door = left_array[3]
+    rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
+
+    border_door = door_array[3]
     while True:
+        fps_imutils = imutils.video.FPS().start()
         ret, frame = video_capture.read()  # frame shape 640*480*3
         if not ret:
             with open('log_results.txt', 'a') as log:
@@ -194,7 +210,7 @@ def main(yolo):
         tracker.predict()
         tracker.update(detections)
 
-        cv2.rectangle(frame, (int(left_array[0]), int(left_array[1])), (int(left_array[2]), int(left_array[3])),
+        cv2.rectangle(frame, (int(door_array[0]), int(door_array[1])), (int(door_array[2]), int(door_array[3])),
                       (23, 158, 21), 3)
         if len(detections) != 0:
             counter.someone_inframe()
@@ -214,12 +230,12 @@ def main(yolo):
 
             if track.track_id not in counter.people_init or counter.people_init[track.track_id] == 0:
                 counter.obj_initialized(track.track_id)
-                ratio_init = find_ratio_ofbboxes(bbox=bbox, rect_compare=rect_left)
+                ratio_init = find_ratio_ofbboxes(bbox=bbox, rect_compare=rect_door)
 
                 if ratio_init > 0:
-                    if ratio_init >= 0.8 and bbox[3] < left_array[3]:
-                        counter.people_init[track.track_id] = 2  # man in left side
-                    elif ratio_init < 0.8 and bbox[3] > left_array[3]:  # initialized in the bus, mb going out
+                    if ratio_init >= 0.5:  # and bbox[3] < door_array[3]:
+                        counter.people_init[track.track_id] = 2  # man in the door
+                    elif ratio_init < 0.5:  # and bbox[3] > door_array[3]:  # initialized in the outside
                         counter.people_init[track.track_id] = 1
                 else:
                     counter.people_init[track.track_id] = 1
@@ -239,9 +255,9 @@ def main(yolo):
                 cv2.putText(frame, 'ADC: ' + adc, (int(bbox[0]), int(bbox[3] + 2e-2 * frame.shape[1])), 0,
                             1e-3 * frame.shape[0], (0, 255, 0), 1)
 
-        id_get_lost = [track.track_id for track in tracker.tracks if track.time_since_update >= 5]
+        id_get_lost = [track.track_id for track in tracker.tracks if track.time_since_update >= 35]
 
-        # TODO clear people_init and other dicts
+        # mb do clear people_init and other dicts
         for val in counter.people_init.keys():
             ratio = 0
             cur_c = find_centroid(counter.cur_bbox[val])
@@ -250,22 +266,22 @@ def main(yolo):
                              cur_c[1] - init_c[1])
 
             if val in id_get_lost and counter.people_init[val] != -1:
-                ratio = find_ratio_ofbboxes(bbox=counter.cur_bbox[val], rect_compare=rect_left)
+                ratio = find_ratio_ofbboxes(bbox=counter.cur_bbox[val], rect_compare=rect_door)
 
-                if vector_person[0] > 200 and counter.people_init[val] == 2 \
-                        and ratio < 0.7:  # and counter.people_bbox[val][3] > border_door \
+                if vector_person[1] < -100 and counter.people_init[val] == 2 \
+                        and ratio < 0.6:  # and counter.people_bbox[val][3] > border_door \
                     counter.get_out()
-                    print(vector_person[0], counter.people_init[val], ratio)
+                    #  TODO save video in output_folder
+                    print(vector_person[1], counter.people_init[val], ratio)
 
-                elif vector_person[0] < -100 and counter.people_init[val] == 1 \
-                        and ratio >= 0.7:
+                elif vector_person[1] > 100 and counter.people_init[val] == 1 \
+                        and ratio >= 0.6:
                     counter.get_in()
-                    print(vector_person[0], counter.people_init[val], ratio)
+                    print(vector_person[1], counter.people_init[val], ratio)
 
                 counter.people_init[val] = -1
-                del val
 
-        ins, outs = counter.show_counter()
+        ins, outs = counter.return_counter()
         cv2.rectangle(frame, (700, 0), (950, 50),
                       (0, 0, 0), -1, 8)
         cv2.putText(frame, "in: {}, out: {} ".format(ins, outs), (710, 35), 0,
@@ -292,10 +308,9 @@ def main(yolo):
                 median_fps = float(np.median(np.array(fpeses)))
                 fps = round(median_fps, 1)
                 print('max fps: ', fps)
-                fps = 20
+                # fps = 20
                 counter.fps = fps
                 fpeses.append(fps)
-
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

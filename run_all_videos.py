@@ -152,7 +152,7 @@ def main(yolo):
         fps = 0.0
         fps_imutils = imutils.video.FPS().start()
 
-        all_doors = read_door_info('data_files/doors_info.csv')
+        all_doors = read_door_info('data_files/doors_info.json')
         door_array = all_doors[video_name]
         rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
 
