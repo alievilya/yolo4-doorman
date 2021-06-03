@@ -2,9 +2,9 @@ import os
 import colorsys
 
 import numpy as np
-from keras import backend as K
-from keras.models import load_model
-from keras.layers import Input
+from tensorflow.compat.v1.keras import backend as K
+from tensorflow.keras.models import load_model
+from tensorflow.keras import Input
 import tensorflow as tf
 
 from yolo4.model import yolo_eval, yolo4_body
@@ -166,10 +166,10 @@ if __name__ == '__main__':
     # classes_path = 'model_data/head_classes.txt'
     # weights_path = 'model_data/yolov4-custom_best.weights'
     #
-    model_path = 'model_data/yolov4-csp.h5'
+    model_path = 'model_data/yolov4.h5'
     anchors_path = 'model_data/yolo_anchors.txt'
     classes_path = 'model_data/voc_classes.txt'
-    weights_path = 'model_data/yolov4-csp.weights'
+    weights_path = 'model_data/yolov4.weights'
 
     score = 0.5
     iou = 0.5

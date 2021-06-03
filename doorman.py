@@ -145,16 +145,20 @@ def main(yolo):
     fpeses = []
 
     check_gpu()
-    video_name = 'mask3'
+    video_name = 'test2'
     video_path = video_name + input_format
     print("opening video: {}".format(video_path))
     full_video_path = join(input_folder, video_path)
     # full_video_path = "rtsp://admin:admin@192.168.1.52:554/1/h264major"
-    output_name = output_folder + 'out_' + video_name + output_format
+
     meta_name = meta_folder + video_name + ".json"
     with open(meta_name) as meta_config_json:
         meta_config = json.load(meta_config_json)
     camera_id = meta_config["camera_id"]
+    if not os.path.exists(output_folder + str(camera_id)):
+        os.mkdir(output_folder + str(camera_id))
+
+    output_name = output_folder + camera_id + 'out_' + video_name + output_format
     counter = Counter(counter_in=0, counter_out=0, track_id=0)
 
     if asyncVideo_flag:
