@@ -48,7 +48,7 @@ def detect(config):
     left_array = None
     rect_left = None
 
-    token = "1868509329:AAHGNVxAuV2oCl_cf9O87jaYP4t7b0jRY7w"
+    token = "xxx"
     bot = telebot.TeleBot(token)
 
     def send_message(current_date, counter_in, counter_out):

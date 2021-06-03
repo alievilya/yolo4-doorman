@@ -2,7 +2,7 @@ import os
 import colorsys
 
 import numpy as np
-from tensorflow.compat.v1.keras import backend as K
+from keras import backend as K
 from tensorflow.keras.models import load_model
 from tensorflow.keras import Input
 import tensorflow as tf
@@ -168,7 +168,7 @@ if __name__ == '__main__':
     #
     model_path = 'model_data/yolov4.h5'
     anchors_path = 'model_data/yolo_anchors.txt'
-    classes_path = 'model_data/voc_classes.txt'
+    classes_path = 'model_data/coco_classes.txt'
     weights_path = 'model_data/yolov4.weights'
 
     score = 0.5
