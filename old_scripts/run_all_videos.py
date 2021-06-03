@@ -19,7 +19,7 @@ from deep_sort import nn_matching
 from deep_sort import preprocessing
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
-from draw_enter import read_door_info
+from old_scripts.draw_enter import read_door_info
 from rectangles import find_centroid, Rectangle, rect_square
 from tools import generate_detections as gdet
 from videocaptureasync import VideoCaptureAsync
@@ -109,7 +109,7 @@ def main(yolo):
     initialize_door_by_yourself = False
     door_array = None
     # Deep SORT
-    model_filename = 'model_data/mars-small128.pb'
+    model_filename = '../model_data/mars-small128.pb'
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
 
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
@@ -177,7 +177,7 @@ def main(yolo):
                                                                                                  truth.outside,
                                                                                                  total_count,
                                                                                                  true_total, err, mse)
-                with open('log_results.txt', 'a') as log:
+                with open('../log_results.txt', 'a') as log:
                     log.write(log_res)
                 print(log_res)
                 error_values.append(err)

@@ -5,7 +5,7 @@ import pandas as pd
 data_labels = pd.DataFrame(columns=['filename', 'in', 'out'])
 data_labels['in'] = 2
 
-filenames = os.listdir('data_files/')
+filenames = os.listdir('../data_files/')
 with open('labels.txt', 'w+') as file:
     for filename in filenames:
 

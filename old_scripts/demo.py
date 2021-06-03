@@ -20,7 +20,7 @@ import imutils.video
 from videocaptureasync import VideoCaptureAsync
 from os.path import join
 from collections import OrderedDict
-from draw_enter import select_object, read_door_info
+from old_scripts.draw_enter import select_object, read_door_info
 from rectangles import find_centroid, Rectangle, rect_square
 
 
@@ -94,7 +94,7 @@ def main(yolo):
     initialize_door_by_yourself = False
     door_array = None
     # Deep SORT
-    model_filename = 'model_data/mars-small128.pb'
+    model_filename = '../model_data/mars-small128.pb'
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
 
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
@@ -152,7 +152,7 @@ def main(yolo):
                                                                              truth.inside,
                                                                              counter.counter_out, truth.outside,
                                                                              total_count, true_total, err)
-            with open('log_results.txt', 'w') as file:
+            with open('../log_results.txt', 'w') as file:
                 file.write(log_res)
             print(log_res)
             error_values.append(err)

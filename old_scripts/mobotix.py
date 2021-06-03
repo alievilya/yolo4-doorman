@@ -122,7 +122,7 @@ def main(yolo):
     output_format = 'mp4'
 
     # Deep SORT
-    model_filename = 'model_data/mars-small128.pb'
+    model_filename = '../model_data/mars-small128.pb'
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
 
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
@@ -138,7 +138,7 @@ def main(yolo):
     video_name = 'test1.mp4'
 
     print("opening video: {}".format(video_name))
-    file_path = join('data_files/', video_name)
+    file_path = join('../data_files/', video_name)
     # file_path = "rtsp://admin:admin@192.168.1.52:554/1/h264major"
     output_name = 'save_data/out_' + video_name[0:-3] + output_format
     counter = Counter(counter_in=0, counter_out=0, track_id=0)
@@ -170,7 +170,7 @@ def main(yolo):
     while True:
         ret, frame = video_capture.read()  # frame shape 640*480*3
         if not ret:
-            with open('log_results.txt', 'a') as log:
+            with open('../log_results.txt', 'a') as log:
                 log.write('1')
             break
 

@@ -313,7 +313,7 @@ import json
 if __name__ == '__main__':
     # subprocess.run("python send_video.py", shell=True)
     # os.system("python send_video.py &")
-    with open("cfg/detection_tracker_cfg.json") as detection_config:
+    with open("../cfg/detection_tracker_cfg.json") as detection_config:
         detect_config = json.load(detection_config)
     print(detect_config["cfg"])
 
