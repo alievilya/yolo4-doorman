@@ -25,7 +25,7 @@ from videocaptureasync import VideoCaptureAsync
 from yolo import YOLO
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
 
 
 config = tf.compat.v1.ConfigProto()
@@ -104,36 +104,36 @@ class Counter:
     def return_total_count(self):
         return self.counter_in + self.counter_out
 
-    def update_identities(self, identities):
-        for tr_i in identities:
-            if tr_i in self.age_counter.keys():
-                if self.frame_age_counter.get(tr_i) is None:
-                    self.frame_age_counter[tr_i] = 0
-                if self.age_counter.get(tr_i) is None:
-                    self.age_counter[tr_i] = 0
-                else:
-                    self.age_counter[tr_i] = 0
-                    self.frame_age_counter[tr_i] += 1
-            else:
-                # TODO общий счетчик кадров с человеком
-                self.age_counter[tr_i] = 0
-
-    def clear_lost_ids(self):
-        self.lost_ids = set()
-
-    def age_increment(self):
-        x = None
-        for tr in self.age_counter.keys():
-            self.age_counter[tr] += 1
-            if self.age_counter[tr] >= self.max_age_counter:
-                self.lost_ids.add(tr)
-                x = tr
-        if self.age_counter.get(x):
-            del self.age_counter[x]
-
-    def return_lost_ids(self):
-        self.age_increment()
-        return self.lost_ids
+    # def update_identities(self, identities):
+    #     for tr_i in identities:
+    #         if tr_i in self.age_counter.keys():
+    #             if self.frame_age_counter.get(tr_i) is None:
+    #                 self.frame_age_counter[tr_i] = 0
+    #             if self.age_counter.get(tr_i) is None:
+    #                 self.age_counter[tr_i] = 0
+    #             else:
+    #                 self.age_counter[tr_i] = 0
+    #                 self.frame_age_counter[tr_i] += 1
+    #         else:
+    #             # TODO общий счетчик кадров с человеком
+    #             self.age_counter[tr_i] = 0
+    #
+    # def clear_lost_ids(self):
+    #     self.lost_ids = set()
+    #
+    # def age_increment(self):
+    #     x = None
+    #     for tr in self.age_counter.keys():
+    #         self.age_counter[tr] += 1
+    #         if self.age_counter[tr] >= self.max_age_counter:
+    #             self.lost_ids.add(tr)
+    #             x = tr
+    #     if self.age_counter.get(x):
+    #         del self.age_counter[x]
+    #
+    # def return_lost_ids(self):
+    #     self.age_increment()
+    #     return self.lost_ids
 
 
 def check_gpu():
@@ -315,8 +315,6 @@ def main(yolo):
                         print(vector_person[1], counter.people_init[val], ratio)
 
                     counter.people_init[val] = -1
-                    # lost_ids.remove(val)
-                counter.clear_lost_ids()
 
             ins, outs = counter.return_counter()
             cv2.rectangle(frame, (frame.shape[1]-150, 0), (frame.shape[1], 50),
@@ -369,6 +367,6 @@ def main(yolo):
 
 if __name__ == '__main__':
     tf.debugging.set_log_device_placement(True)
-    gpus = tf.config.experimental.list_logical_devices('GPU')
-    # with tf.device(gpus[1]):
-    main(YOLO())
+    gpus = tf.config.list_logical_devices('GPU')
+    with tf.device(gpus[1].name):
+        main(YOLO())
