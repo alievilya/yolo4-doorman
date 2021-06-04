@@ -1,5 +1,6 @@
 import itertools
 
+
 def bb_intersection_over_union(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
     xA = max(boxA[0], boxB[0])
@@ -24,6 +25,21 @@ def find_centroid(bbox):
     return int((bbox[0] + bbox[2]) / 2), int((bbox[1] + bbox[3]) / 2)
 
 
+def find_ratio_ofbboxes(bbox, rect_compare):
+    ratio = 0
+    rect_detection = Rectangle(bbox[0], bbox[1],
+                               bbox[2], bbox[3])
+    inter_detection = rect_detection & rect_compare
+    if inter_detection:
+        inter_square_detection = rect_square(*inter_detection)
+        cur_square_detection = rect_square(*rect_detection)
+        try:
+            ratio = inter_square_detection / cur_square_detection
+        except ZeroDivisionError:
+            ratio = 0
+    return ratio
+
+
 class Rectangle:
     def intersection(self, other):
         a, b = self, other
@@ -31,31 +47,33 @@ class Rectangle:
         y1 = max(min(a.y1, a.y2), min(b.y1, b.y2))
         x2 = min(max(a.x1, a.x2), max(b.x1, b.x2))
         y2 = min(max(a.y1, a.y2), max(b.y1, b.y2))
-        if x1<x2 and y1<y2:
+        if x1 < x2 and y1 < y2:
             return type(self)(x1, y1, x2, y2)
+
     __and__ = intersection
 
     def difference(self, other):
-        inter = self&other
+        inter = self & other
         if not inter:
             yield self
             return
         xs = {self.x1, self.x2}
         ys = {self.y1, self.y2}
-        if self.x1<other.x1<self.x2: xs.add(other.x1)
-        if self.x1<other.x2<self.x2: xs.add(other.x2)
-        if self.y1<other.y1<self.y2: ys.add(other.y1)
-        if self.y1<other.y2<self.y2: ys.add(other.y2)
+        if self.x1 < other.x1 < self.x2: xs.add(other.x1)
+        if self.x1 < other.x2 < self.x2: xs.add(other.x2)
+        if self.y1 < other.y1 < self.y2: ys.add(other.y1)
+        if self.y1 < other.y2 < self.y2: ys.add(other.y2)
         for (x1, x2), (y1, y2) in itertools.product(
                 pairwise(sorted(xs)), pairwise(sorted(ys))
         ):
             rect = type(self)(x1, y1, x2, y2)
-            if rect!=inter:
+            if rect != inter:
                 yield rect
+
     __sub__ = difference
 
     def __init__(self, x1, y1, x2, y2):
-        if x1>x2 or y1>y2:
+        if x1 > x2 or y1 > y2:
             raise ValueError("Coordinates are invalid")
         self.x1, self.y1, self.x2, self.y2 = x1, y1, x2, y2
 
@@ -66,12 +84,13 @@ class Rectangle:
         yield self.y2
 
     def __eq__(self, other):
-        return isinstance(other, Rectangle) and tuple(self)==tuple(other)
+        return isinstance(other, Rectangle) and tuple(self) == tuple(other)
+
     def __ne__(self, other):
-        return not (self==other)
+        return not (self == other)
 
     def __repr__(self):
-        return type(self).__name__+repr(tuple(self))
+        return type(self).__name__ + repr(tuple(self))
 
 
 def pairwise(iterable):
@@ -80,14 +99,16 @@ def pairwise(iterable):
     next(b, None)
     return zip(a, b)
 
+
 def rect_square(x1, y1, x2, y2):
-    return abs(x1-x2)*abs(y1-y2)
+    return abs(x1 - x2) * abs(y1 - y2)
+
 
 if __name__ == "__main__":
     # 1.
     a = Rectangle(0, 0, 3, 3)
     b = Rectangle(2, 1, 4, 4)
-    res = a&b
+    res = a & b
 
     print(rect_square(*res))
     # Rectangle(0.5, 0.5, 1, 1)

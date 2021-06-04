@@ -19,7 +19,7 @@ from deep_sort import nn_matching
 from deep_sort import preprocessing
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
-from rectangles import find_centroid, Rectangle, rect_square
+from rectangles import find_centroid, Rectangle, find_ratio_ofbboxes, rect_square
 from tools import generate_detections as gdet
 from videocaptureasync import VideoCaptureAsync
 from yolo import YOLO
@@ -37,21 +37,6 @@ rect_endpoint_tmp = []
 rect_bbox = []
 bbox_list_rois = []
 drawing = False
-
-
-def find_ratio_ofbboxes(bbox, rect_compare):
-    ratio = 0
-    rect_detection = Rectangle(bbox[0], bbox[1],
-                               bbox[2], bbox[3])
-    inter_detection = rect_detection & rect_compare
-    if inter_detection:
-        inter_square_detection = rect_square(*inter_detection)
-        cur_square_detection = rect_square(*rect_detection)
-        try:
-            ratio = inter_square_detection / cur_square_detection
-        except ZeroDivisionError:
-            ratio = 0
-    return ratio
 
 
 class Counter:
