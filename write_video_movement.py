@@ -118,7 +118,7 @@ class MoveDetector():
                 # Draw a rectangle around big enough movements
                 top_coords = (x, y)
                 bot_coords = (x + w, y + h)
-                if config["draw_rect"]:
+                if config["draw_rect"] == "True":
                     cv2.rectangle(self.frame, top_coords, bot_coords, (0, 255, 0), 2)
                 coords = top_coords + bot_coords
                 moving_cnts.append(coords)
@@ -166,6 +166,7 @@ if __name__ == "__main__":
             frame, contours = Motion[i].detect_movement(config=config)
 
             cv2.imshow("frame {}".format(i), frame)
+            cv2.waitKey(1)
             if Motion[i].move_near_door(contours):
                 hour_greenvich = strftime("%H", gmtime())
                 hour_moscow = f'{i}_' + str(int(hour_greenvich) + 3)

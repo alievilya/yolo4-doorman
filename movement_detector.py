@@ -22,15 +22,14 @@ import numpy as np
 import imutils
 
 from rectangles import Rectangle, find_ratio_ofbboxes
-
+from videocaptureasync import VideoCaptureAsync
 
 class MoveDetector():
     def __init__(self, link):
         self.link = link
         # Init frame variables
-        self.around_door_array = [234, 45, 281, 174]
-        self.rect_around_door = Rectangle(self.around_door_array[0], self.around_door_array[1],
-                                          self.around_door_array[2], self.around_door_array[3])
+        self.around_door_array = [None, None, None, None]
+        self.cap = None
         self.first_frame = None
         self.next_frame = None
         self.font = cv2.FONT_HERSHEY_SIMPLEX
@@ -41,11 +40,24 @@ class MoveDetector():
         self.output_video = None
         self.contours = []
 
+    def load_doors(self):
+        with open("data_files/around_doors_info.json") as doors_config:
+            self.around_doors_config = json.load(doors_config)
+        self.around_door_array = self.around_doors_config[self.link]
+        self.rect_around_door = Rectangle(self.around_door_array[0], self.around_door_array[1],
+                                          self.around_door_array[2], self.around_door_array[3])
+
+    def read_cap(self):
+        self.ret, self.frame = self.cap.read()
+
     def set_init(self, cap):
+        self.cap=cap
+        self.load_doors()
         self.transient_movement_flag = False
         self.stop_writing = False
+
         # Read frame
-        self.ret, self.frame = cap.read()
+        self.read_cap()
         self.text = "Unoccupied"
         return self.ret
 
@@ -69,15 +81,11 @@ class MoveDetector():
                 self.stop_writing = False
                 self.output_video = None
 
+
+
     def move_near_door(self, contours):
         if len(contours) > 0:
-            for contour in contours:
-                # bbox = contour[0] + contour[1]
-                ratio_contour = find_ratio_ofbboxes(contour, rect_compare=self.rect_around_door)
-                if ratio_contour >= 0:
-                    return True
-                else:
-                    return False
+            return True
         else:
             return False
 
@@ -87,8 +95,11 @@ class MoveDetector():
             # continue
             return False
         # Resize and save a greyscale version of the image
-        self.frame = imutils.resize(self.frame, width=640)
-        self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+
+        # self.frame = imutils.resize(self.frame, width=640)
+        self.cropped_frame = self.frame[self.around_door_array[1]:self.around_door_array[3],
+                             self.around_door_array[0]:self.around_door_array[2]]
+        self.gray = cv2.cvtColor(self.cropped_frame, cv2.COLOR_BGR2GRAY)
         # Blur it to remove camera noise (reducing false positives)
         self.gray = cv2.GaussianBlur(self.gray, (17, 17), 0)
         # If the first frame is nothing, initialise it
@@ -142,21 +153,25 @@ class MoveDetector():
             return self.frame, []
 
         cv2.putText(self.frame, str(text), (10, 35), self.font, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+
+
+
         # self.frame_delta = cv2.cvtColor(self.frame_delta, cv2.COLOR_GRAY2BGR)
 
     def run_detection(self):
+        t0 = time.time()
         # print('opening link: ', self.link)
-        cap = cv2.VideoCapture(self.link)  # Then start the webcam
-        ret = self.set_init(cap=cap)
+        if self.cap is None:
+            self.cap = cv2.VideoCapture(self.link)  # Then start the webcam
+            self.ret = self.set_init(self.cap)
+        cv2.imshow("{}".format(self.link), self.frame)
+        cv2.waitKey(1)
+        # cap = VideoCaptureAsync(self.link)
 
-        if not ret:
+        if not self.ret:
             return False
         self.detect_movement(config=config)
-        # cv2.imshow("{}".format(self.link), self.frame)
-        # cv2.waitKey(1)
 
-        # if cv2.waitKey(1) & 0xFF == ord('q'):
-        #     break
         if self.move_near_door(self.contours):
             hour_greenwich = strftime("%H", gmtime())
             hour_moscow = f'{self.link}_' + str(int(hour_greenwich) + 3)
@@ -166,6 +181,11 @@ class MoveDetector():
         self.write_video(self.frame)
         if self.stop_writing:
             self.release_video(self.frame)
+        delta_time = (time.time() - t0)
+        fps = round(1 / delta_time)
+        print('fps = ', fps)
+
+
 
     def loop_detection(self):
         # print('opening link: ', self.link)
@@ -193,37 +213,74 @@ class MoveDetector():
             if self.stop_writing:
                 self.release_video(self.frame)
 
+
+class Worker(threading.Thread):
+
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs=None, *, daemon=None, num_thread, motion, link):
+        # вызываем конструктор базового класса
+        super().__init__()
+        # определяем аргументы собственного класса
+        self.num_thread = num_thread
+        self.motion = motion
+
+    def run(self):
+        # pass
+        # теперь код функции 'worker()', которая должна
+        # выполняться в отдельных потоках будет здесь
+
+        print(f'Старт потока №{self.num_thread}')
+        self.motion.run_detection()
+        # time.sleep(0)
+        print(f'Завершение работы потока №{self.num_thread}')
+
 if __name__ == "__main__":
     with open("cfg/motion_detection_cfg.json") as config_file:
         config = json.load(config_file)
-    links = ["rtsp://admin:admin@192.168.1.52:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major"]
-             # "rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major"]
+    links = ["rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major",
+             "rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major",
+             "rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major"]
 
     Motion = [MoveDetector(link) for link in links]
-    # MotionThread = MoveDetector("rtsp://admin:admin@192.168.1.52:554/1/h264major")
+    MotionOne = MoveDetector("data_files/videos_motion/test3.mp4")
+    # MotionOne = MoveDetector("rtsp://admin:admin@192.168.1.18:554/1/h264major")
+
+    # channels = []
+    # for i, MotionChannel in enumerate(Motion):
+    #     c = Worker(target=print('load {}'.format(i)), daemon=True, num_thread=i, motion=MotionChannel, link=links[i])
+    #     channels.append(c)
     fpeses = []
     while True:
-        t0 = time.time()
-        try:
-            for MotionChannel in Motion:
-                # MotionChannel.run_detection()
-                ch = threading.Thread(target=MotionChannel.run_detection, daemon=True)
-                ch.start()
-                # ch = threading.Thread(target=MotionThread.run_detection, daemon=True)
-                # ch.start()
-        except:
-                print('error')
-        delta_time = (time.time() - t0)
-        fps = round(1 / delta_time)
-        if len(fpeses) < 35:
-            fpeses.append(fps)
-            print(delta_time)
-        elif len(fpeses) == 35:
-            # fps = round(np.median(np.array(fpeses)))
-            median_fps = float(np.median(np.array(fpeses)))
-            fps = round(median_fps, 2)
-            print('fps set: ', fps)
-            fpeses.append(fps)
+        # t0 = time.time()
+        # for i, MotionChannel in enumerate(Motion):
+        #     ch = threading.Thread(target=MotionChannel.run_detection, daemon=True)
+        #     if not ch.ident:
+        #         ch.start()
+        MotionOne.run_detection()
+
+
+        # main_thread = threading.main_thread()
+        # # # объединим потоки, что бы дождаться их выполнения
+        # for t in threading.enumerate():
+        #     # Список 'threading.enumerate()' включает в себя основной
+        #     # поток и т.к. присоединение основного потока самого к себе
+        #     # вызывает взаимоблокировку, то его необходимо пропустить
+        #     if t is main_thread:
+        #         continue
+        #     # print(f'Ожидание выполнения потока {t.name}')
+        #     t.join()
+
+        # delta_time = (time.time() - t0)
+        # fps = round(1 / delta_time)
+        # if len(fpeses) < 35:
+        #     fpeses.append(fps)
+        #     print(delta_time)
+        # elif len(fpeses) == 35:
+        #     # fps = round(np.median(np.array(fpeses)))
+        #     median_fps = float(np.median(np.array(fpeses)))
+        #     fps = round(median_fps, 2)
+        #     print('fps set: ', fps)
+        #     fpeses.append(fps)
 
     # Cleanup when closed
     # cv2.destroyAllWindows()
