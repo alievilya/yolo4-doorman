@@ -200,19 +200,19 @@ if __name__ == "__main__":
              # "rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major"]
 
     Motion = [MoveDetector(link) for link in links]
-    MotionThread = MoveDetector("rtsp://admin:admin@192.168.1.52:554/1/h264major")
+    # MotionThread = MoveDetector("rtsp://admin:admin@192.168.1.52:554/1/h264major")
     fpeses = []
     while True:
         t0 = time.time()
         try:
-        # for MotionChannel in Motion:
-            # MotionChannel.run_detection()
-            # ch = threading.Thread(target=MotionChannel.loop_detection, daemon=True)
-            # ch.start()
-            ch = threading.Thread(target=MotionThread.run_detection, daemon=True)
-            ch.start()
+            for MotionChannel in Motion:
+                # MotionChannel.run_detection()
+                ch = threading.Thread(target=MotionChannel.run_detection, daemon=True)
+                ch.start()
+                # ch = threading.Thread(target=MotionThread.run_detection, daemon=True)
+                # ch.start()
         except:
-            print('error')
+                print('error')
         delta_time = (time.time() - t0)
         fps = round(1 / delta_time)
         if len(fpeses) < 35:
