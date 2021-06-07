@@ -50,16 +50,13 @@ class MoveDetector():
     def read_cap(self):
         self.ret, self.frame = self.cap.read()
 
-    def set_init(self, cap):
-        self.cap=cap
+    def set_init(self):
+        self.read_cap()
         self.load_doors()
         self.transient_movement_flag = False
         self.stop_writing = False
-
         # Read frame
-        self.read_cap()
         self.text = "Unoccupied"
-        return self.ret
 
     def start_video(self, frame, output_name):
         if self.output_video is None:
@@ -146,7 +143,6 @@ class MoveDetector():
         if self.movement_persistent_counter > 0:
             text = "Movement Detected " + str(self.movement_persistent_counter)
             self.movement_persistent_counter -= 1
-
         else:
             text = "No Movement Detected"
             self.stop_writing = True
@@ -162,11 +158,9 @@ class MoveDetector():
         t0 = time.time()
         # print('opening link: ', self.link)
         if self.cap is None:
-            self.cap = cv2.VideoCapture(self.link)  # Then start the webcam
-            self.ret = self.set_init(self.cap)
-        cv2.imshow("{}".format(self.link), self.frame)
-        cv2.waitKey(1)
-        # cap = VideoCaptureAsync(self.link)
+            # self.cap = cv2.VideoCapture(self.link)  # start the cam
+            self.cap = VideoCaptureAsync(self.link)
+        self.set_init()
 
         if not self.ret:
             return False
@@ -181,6 +175,9 @@ class MoveDetector():
         self.write_video(self.frame)
         if self.stop_writing:
             self.release_video(self.frame)
+
+        cv2.imshow("{}".format(self.link), self.frame)
+        cv2.waitKey(1)
         delta_time = (time.time() - t0)
         fps = round(1 / delta_time)
         print('fps = ', fps)
@@ -189,20 +186,21 @@ class MoveDetector():
 
     def loop_detection(self):
         # print('opening link: ', self.link)
-        cap = cv2.VideoCapture(self.link)  # Then start the webcam
 
         while True:
-            ret = self.set_init(cap=cap)
-            if not ret:
-                break
+            t0 = time.time()
+            # print('opening link: ', self.link)
+            if self.cap is None:
+                self.cap = cv2.VideoCapture(self.link)  # start the cam
+                # self.cap = VideoCaptureAsync(self.link)
+            self.set_init()
+            print(self.frame.shape)
+            if not self.ret:
+                print('error: ret is None')
+                # continue
+                return 2
             self.detect_movement(config=config)
-            cv2.imshow("{}".format(self.link), self.frame)
-            key = cv2.waitKey(1)
-            if key == ord('q'):
-                cv2.destroyAllWindows()
-                exit(1)
-            # if cv2.waitKey(1) & 0xFF == ord('q'):
-            #     break
+
             if self.move_near_door(self.contours):
                 hour_greenwich = strftime("%H", gmtime())
                 hour_moscow = f'{self.link}_' + str(int(hour_greenwich) + 3)
@@ -212,6 +210,12 @@ class MoveDetector():
             self.write_video(self.frame)
             if self.stop_writing:
                 self.release_video(self.frame)
+
+            cv2.imshow("{}".format(self.link), self.frame)
+            cv2.waitKey(1)
+            delta_time = (time.time() - t0)
+            fps = round(1 / delta_time)
+            print('fps = ', fps)
 
 
 class Worker(threading.Thread):
@@ -238,8 +242,10 @@ if __name__ == "__main__":
     with open("cfg/motion_detection_cfg.json") as config_file:
         config = json.load(config_file)
     links = ["rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major",
-             "rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major",
-             "rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major"]
+             "rtsp://admin:admin@192.168.1.18:554/3/h264major", "rtsp://admin:admin@192.168.1.18:554/4/h264major",
+             "rtsp://admin:admin@192.168.1.18:554/5/h264major", "rtsp://admin:admin@192.168.1.18:554/6/h264major"]
+
+    # links = ["data_files/videos_motion/test3.mp4" for _ in range(6)]
 
     Motion = [MoveDetector(link) for link in links]
     MotionOne = MoveDetector("data_files/videos_motion/test3.mp4")
@@ -251,9 +257,9 @@ if __name__ == "__main__":
     #     channels.append(c)
     fpeses = []
     while True:
-        # t0 = time.time()
+        t0 = time.time()
         # for i, MotionChannel in enumerate(Motion):
-        #     ch = threading.Thread(target=MotionChannel.run_detection, daemon=True)
+        #     ch = threading.Thread(target=MotionChannel.loop_detection, daemon=True)
         #     if not ch.ident:
         #         ch.start()
         MotionOne.run_detection()
@@ -272,6 +278,7 @@ if __name__ == "__main__":
 
         # delta_time = (time.time() - t0)
         # fps = round(1 / delta_time)
+        # print('fps = ', fps)
         # if len(fpeses) < 35:
         #     fpeses.append(fps)
         #     print(delta_time)

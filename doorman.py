@@ -179,7 +179,7 @@ def main(yolo):
         if not os.path.exists(output_folder + str(camera_id)):
             os.mkdir(output_folder + str(camera_id))
 
-        output_name = output_folder + camera_id + '/out_' + video_name + output_format
+        output_name = output_folder + camera_id + '/out_' + video_name
         counter = Counter(counter_in=0, counter_out=0, track_id=0)
 
         if asyncVideo_flag:
@@ -311,8 +311,8 @@ def main(yolo):
             # cv2.resizeWindow('video', 1422, 800)
             cv2.imshow('video33', frame)
 
-            if writeVideo_flag:
-                out.write(frame)
+            # if writeVideo_flag:
+            out.write(frame)
 
             fps_imutils.update()
 
