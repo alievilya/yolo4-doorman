@@ -39,6 +39,7 @@ class MoveDetector():
         self.fps = 20
         self.output_video = None
         self.contours = []
+        self.to_stop = False
 
     def load_doors(self):
         with open("data_files/around_doors_info.json") as doors_config:
@@ -51,6 +52,7 @@ class MoveDetector():
         self.ret, self.frame = self.cap.read()
 
     def set_init(self):
+
         self.read_cap()
         self.load_doors()
         self.transient_movement_flag = False
@@ -78,8 +80,6 @@ class MoveDetector():
                 self.stop_writing = False
                 self.output_video = None
 
-
-
     def move_near_door(self, contours):
         if len(contours) > 0:
             return True
@@ -92,7 +92,6 @@ class MoveDetector():
             # continue
             return False
         # Resize and save a greyscale version of the image
-
         # self.frame = imutils.resize(self.frame, width=640)
         self.cropped_frame = self.frame[self.around_door_array[1]:self.around_door_array[3],
                              self.around_door_array[0]:self.around_door_array[2]]
@@ -150,8 +149,6 @@ class MoveDetector():
 
         cv2.putText(self.frame, str(text), (10, 35), self.font, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
 
-
-
         # self.frame_delta = cv2.cvtColor(self.frame_delta, cv2.COLOR_GRAY2BGR)
 
     def run_detection(self):
@@ -187,18 +184,17 @@ class MoveDetector():
     def loop_detection(self):
         # print('opening link: ', self.link)
 
-        while True:
+        while not self.to_stop:
             t0 = time.time()
             # print('opening link: ', self.link)
             if self.cap is None:
                 self.cap = cv2.VideoCapture(self.link)  # start the cam
                 # self.cap = VideoCaptureAsync(self.link)
             self.set_init()
-            print(self.frame.shape)
             if not self.ret:
                 print('error: ret is None')
                 # continue
-                return 2
+                self.to_stop = True
             self.detect_movement(config=config)
 
             if self.move_near_door(self.contours):
@@ -248,7 +244,7 @@ if __name__ == "__main__":
     # links = ["data_files/videos_motion/test3.mp4" for _ in range(6)]
 
     Motion = [MoveDetector(link) for link in links]
-    MotionOne = MoveDetector("data_files/videos_motion/test3.mp4")
+    # MotionOne = MoveDetector("data_files/videos_motion/test3.mp4")
     # MotionOne = MoveDetector("rtsp://admin:admin@192.168.1.18:554/1/h264major")
 
     # channels = []
@@ -258,11 +254,11 @@ if __name__ == "__main__":
     fpeses = []
     while True:
         t0 = time.time()
-        # for i, MotionChannel in enumerate(Motion):
-        #     ch = threading.Thread(target=MotionChannel.loop_detection, daemon=True)
-        #     if not ch.ident:
-        #         ch.start()
-        MotionOne.run_detection()
+        for i, MotionChannel in enumerate(Motion):
+            ch = threading.Thread(target=MotionChannel.loop_detection, daemon=True)
+            if not ch.is_alive():
+                ch.start()
+        # MotionOne.run_detection()
 
 
         # main_thread = threading.main_thread()
