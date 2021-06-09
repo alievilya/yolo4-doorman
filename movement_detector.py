@@ -48,7 +48,8 @@ class MoveDetector():
                                           self.around_door_array[2], self.around_door_array[3])
 
     def read_cap(self):
-        self.ret, self.frame = self.cap.read()
+        if self.cap.isOpened():
+            self.ret, self.frame = self.cap.read()
 
     def set_init(self):
         self.read_cap()
@@ -77,8 +78,6 @@ class MoveDetector():
                 print('released')
                 self.stop_writing = False
                 self.output_video = None
-
-
 
     def move_near_door(self, contours):
         if len(contours) > 0:
@@ -115,7 +114,7 @@ class MoveDetector():
         self.frame_delta = cv2.absdiff(self.first_frame, self.next_frame)
         thresh = cv2.threshold(self.frame_delta, 20, 255, cv2.THRESH_BINARY)[1]
         thresh = cv2.dilate(thresh, None, iterations=4)
-        _, cnts, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # loop over the contours
         self.contours = []
@@ -158,8 +157,9 @@ class MoveDetector():
         t0 = time.time()
         # print('opening link: ', self.link)
         if self.cap is None:
-            # self.cap = cv2.VideoCapture(self.link)  # start the cam
-            self.cap = VideoCaptureAsync(self.link)
+            self.cap = cv2.VideoCapture(self.link)  # start the cam
+            # self.cap = VideoCaptureAsync(self.link)
+            # self.cap.start()
         self.set_init()
 
         if not self.ret:
@@ -177,12 +177,14 @@ class MoveDetector():
             self.release_video(self.frame)
 
         cv2.imshow("{}".format(self.link), self.frame)
-        cv2.waitKey(1)
+        key = cv2.waitKey(1)
         delta_time = (time.time() - t0)
         fps = round(1 / delta_time)
         print('fps = ', fps)
-
-
+        if key == ord('q'):
+            self.cap.release()
+            cv2.destroyAllWindows()
+            exit(1)
 
     def loop_detection(self):
         # print('opening link: ', self.link)
@@ -194,11 +196,11 @@ class MoveDetector():
                 self.cap = cv2.VideoCapture(self.link)  # start the cam
                 # self.cap = VideoCaptureAsync(self.link)
             self.set_init()
-            print(self.frame.shape)
+            # print(self.frame.shape)
             if not self.ret:
                 print('error: ret is None')
                 # continue
-                return 2
+                break
             self.detect_movement(config=config)
 
             if self.move_near_door(self.contours):
@@ -211,11 +213,16 @@ class MoveDetector():
             if self.stop_writing:
                 self.release_video(self.frame)
 
-            cv2.imshow("{}".format(self.link), self.frame)
-            cv2.waitKey(1)
             delta_time = (time.time() - t0)
             fps = round(1 / delta_time)
             print('fps = ', fps)
+
+            cv2.imshow("{}".format(self.link), self.frame)
+            key = cv2.waitKey(1)
+            if key == ord('q'):
+                self.cap.release()
+                cv2.destroyAllWindows()
+                exit(1)
 
 
 class Worker(threading.Thread):
@@ -243,7 +250,7 @@ if __name__ == "__main__":
         config = json.load(config_file)
     links = ["rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major",
              "rtsp://admin:admin@192.168.1.18:554/3/h264major", "rtsp://admin:admin@192.168.1.18:554/4/h264major",
-             "rtsp://admin:admin@192.168.1.18:554/5/h264major", "rtsp://admin:admin@192.168.1.18:554/6/h264major"]
+             "rtsp://admin:admin@192.168.1.18:554/5/h264major", "rtsp://admin:admin@192.168.1.18:554/6/h264major"]*3
 
     # links = ["data_files/videos_motion/test3.mp4" for _ in range(6)]
 
@@ -251,18 +258,44 @@ if __name__ == "__main__":
     MotionOne = MoveDetector("data_files/videos_motion/test3.mp4")
     # MotionOne = MoveDetector("rtsp://admin:admin@192.168.1.18:554/1/h264major")
 
-    # channels = []
-    # for i, MotionChannel in enumerate(Motion):
-    #     c = Worker(target=print('load {}'.format(i)), daemon=True, num_thread=i, motion=MotionChannel, link=links[i])
-    #     channels.append(c)
     fpeses = []
     while True:
         t0 = time.time()
         # for i, MotionChannel in enumerate(Motion):
         #     ch = threading.Thread(target=MotionChannel.loop_detection, daemon=True)
-        #     if not ch.ident:
+        #     if not ch.is_alive() or not ch.ident:
+        #         print('start channel')
         #         ch.start()
-        MotionOne.run_detection()
+        # MotionOne.run_detection()
+
+        # channels = [threading.Thread(target=Mot.loop_detection, daemon=True) for Mot in Motion]
+        # for i, ch in enumerate(channels):
+        #     ch.start()
+        #     if not ch.is_alive():
+        #         print(f"{Motion[i].link} \n")
+        #         ch.start()
+        #     else:
+        #         print(f"{Motion[i].link} is alive")
+        # for ch in channels:
+        #     ch.join()
+
+        ch1 = threading.Thread(target=Motion[0].loop_detection, daemon=True)
+        ch1.start()
+        # ch2 = threading.Thread(target=Motion[1].loop_detection, daemon=True)
+        # ch2.start()
+        if not ch1.is_alive():
+            print("chanel 1 ________")
+            ch1.start()
+        else:
+            print('1 alive')
+
+        # if not ch2.is_alive():
+        #     print("chanel 2 ________")
+        #     ch2.start()
+        # else:
+        #     print('2 alive')
+        ch1.join()
+        # ch2.join()
 
 
         # main_thread = threading.main_thread()
