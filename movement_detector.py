@@ -268,33 +268,33 @@ if __name__ == "__main__":
         #         ch.start()
         # MotionOne.run_detection()
 
-        # channels = [threading.Thread(target=Mot.loop_detection, daemon=True) for Mot in Motion]
-        # for i, ch in enumerate(channels):
-        #     ch.start()
-        #     if not ch.is_alive():
-        #         print(f"{Motion[i].link} \n")
-        #         ch.start()
-        #     else:
-        #         print(f"{Motion[i].link} is alive")
-        # for ch in channels:
-        #     ch.join()
+        channels = [threading.Thread(target=Mot.loop_detection, daemon=True) for Mot in Motion]
+        for i, ch in enumerate(channels):
+            ch.start()
+            if not ch.is_alive():
+                print(f"{Motion[i].link} \n")
+                ch.start()
+            else:
+                print(f"{Motion[i].link} is alive")
+        for ch in channels:
+            ch.join()
 
-        ch1 = threading.Thread(target=Motion[0].loop_detection, daemon=True)
-        ch1.start()
+        # ch1 = threading.Thread(target=Motion[0].loop_detection, daemon=True)
+        # ch1.start()
         # ch2 = threading.Thread(target=Motion[1].loop_detection, daemon=True)
         # ch2.start()
-        if not ch1.is_alive():
-            print("chanel 1 ________")
-            ch1.start()
-        else:
-            print('1 alive')
-
+        # if not ch1.is_alive():
+        #     print("chanel 1 ________")
+        #     ch1.start()
+        # else:
+        #     print('1 alive')
+        #
         # if not ch2.is_alive():
         #     print("chanel 2 ________")
         #     ch2.start()
         # else:
         #     print('2 alive')
-        ch1.join()
+        # ch1.join()
         # ch2.join()
 
 
