@@ -180,7 +180,7 @@ class MoveDetector():
         key = cv2.waitKey(1)
         delta_time = (time.time() - t0)
         fps = round(1 / delta_time)
-        print('fps = ', fps)
+        # print('fps = ', fps)
         if key == ord('q'):
             self.cap.release()
             cv2.destroyAllWindows()
@@ -215,7 +215,7 @@ class MoveDetector():
 
             delta_time = (time.time() - t0)
             fps = round(1 / delta_time)
-            print('fps = ', fps)
+            # print('fps = ', fps)
 
             cv2.imshow("{}".format(self.link), self.frame)
             key = cv2.waitKey(1)
@@ -270,7 +270,7 @@ if __name__ == "__main__":
 
         channels = [threading.Thread(target=Mot.loop_detection, daemon=True) for Mot in Motion]
         for i, ch in enumerate(channels):
-            ch.start()
+            # ch.start()
             if not ch.is_alive():
                 print(f"{Motion[i].link} \n")
                 ch.start()
