@@ -25,8 +25,10 @@ from rectangles import Rectangle, find_ratio_ofbboxes
 from videocaptureasync import VideoCaptureAsync
 
 class MoveDetector():
-    def __init__(self, link):
-        self.link = link
+    def __init__(self, id):
+        self.camera_id = id
+        # self.link = link
+        self.link = "rtsp://admin:admin@192.168.1.{}:554/1/h264major".format(self.camera_id)
         # Init frame variables
         self.around_door_array = [None, None, None, None]
         self.cap = None
@@ -39,6 +41,10 @@ class MoveDetector():
         self.fps = 20
         self.output_video = None
         self.contours = []
+        self.videos_meta_folder = "data_files/videos_meta/"
+        self.meta_file = {}
+        self.video_name = None
+
 
     def load_doors(self):
         with open("data_files/around_doors_info.json") as doors_config:
@@ -64,26 +70,38 @@ class MoveDetector():
             self.output_video = cv2.VideoWriter(output_name, self.fourcc, self.fps, (frame.shape[1], frame.shape[0]))
             print('started')
 
-    def write_video(self, frame):
+    def write_video(self):
         if self.output_video:
             if self.output_video.isOpened():
-                print('writing')
-                self.output_video.write(frame)
+                self.output_video.write(self.frame)
+            else:
+                print('start writing')
+
+    def gen_meta(self):
+        self.meta_file["camera_id"] = self.camera_id
+
+    def write_meta(self):
+        self.gen_meta()
+        with open(self.videos_meta_folder + self.video_name[:-4] + '.json', 'w') as wr:
+            json.dump(self.meta_file, wr)
 
     def release_video(self, frame):
         if self.output_video:
-            if self.output_video.isOpened():
-                self.output_video.write(frame)
-                self.output_video.release()
-                print('released')
-                self.stop_writing = False
-                self.output_video = None
+            # if self.output_video.isOpened():
+            self.output_video.write(frame)
+            self.output_video.release()
+            self.write_meta()
+            print('released')
+            self.stop_writing = False
+            self.output_video = None
 
     def move_near_door(self, contours):
         if len(contours) > 0:
             return True
         else:
             return False
+
+
 
     def detect_movement(self, config):
         if not self.ret:
@@ -149,43 +167,7 @@ class MoveDetector():
 
         cv2.putText(self.frame, str(text), (10, 35), self.font, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
 
-
-
         # self.frame_delta = cv2.cvtColor(self.frame_delta, cv2.COLOR_GRAY2BGR)
-
-    def run_detection(self):
-        t0 = time.time()
-        # print('opening link: ', self.link)
-        if self.cap is None:
-            self.cap = cv2.VideoCapture(self.link)  # start the cam
-            # self.cap = VideoCaptureAsync(self.link)
-            # self.cap.start()
-        self.set_init()
-
-        if not self.ret:
-            return False
-        self.detect_movement(config=config)
-
-        if self.move_near_door(self.contours):
-            hour_greenwich = strftime("%H", gmtime())
-            hour_moscow = f'{self.link}_' + str(int(hour_greenwich) + 3)
-            video_name = hour_moscow + strftime("_%M_%S", gmtime()) + '.mp4'
-            output_name = 'data_files/videos_motion/' + video_name
-            self.start_video(self.frame, output_name)
-        self.write_video(self.frame)
-        if self.stop_writing:
-            self.release_video(self.frame)
-
-        cv2.imshow("{}".format(self.link), self.frame)
-        key = cv2.waitKey(1)
-        delta_time = (time.time() - t0)
-        fps = round(1 / delta_time)
-        # print('fps = ', fps)
-        if key == ord('q'):
-            self.cap.release()
-            cv2.destroyAllWindows()
-            exit(1)
-
     def loop_detection(self):
         # print('opening link: ', self.link)
 
@@ -204,17 +186,22 @@ class MoveDetector():
             self.detect_movement(config=config)
 
             if self.move_near_door(self.contours):
-                hour_greenwich = strftime("%H", gmtime())
-                hour_moscow = f'{self.link}_' + str(int(hour_greenwich) + 3)
-                video_name = hour_moscow + strftime("_%M_%S", gmtime()) + '.mp4'
-                output_name = 'data_files/videos_motion/' + video_name
+                if not self.video_name:
+                    hour_greenwich = strftime("%H", gmtime())
+                    # f'{self.link}_' +
+                    # TODO add kinda link to the video, write meta
+                    hour_moscow = str(int(hour_greenwich) + 3)
+                    self.video_name = hour_moscow + strftime("_%M_%S", gmtime()) + '.mp4'
+                output_name = 'data_files/videos_motion/' + self.video_name
                 self.start_video(self.frame, output_name)
-            self.write_video(self.frame)
+
+            self.write_video()
             if self.stop_writing:
                 self.release_video(self.frame)
+                self.video_name = None
 
-            delta_time = (time.time() - t0)
-            fps = round(1 / delta_time)
+            # delta_time = (time.time() - t0)
+            # fps = round(1 / delta_time)
             # print('fps = ', fps)
 
             cv2.imshow("{}".format(self.link), self.frame)
@@ -248,15 +235,12 @@ class Worker(threading.Thread):
 if __name__ == "__main__":
     with open("cfg/motion_detection_cfg.json") as config_file:
         config = json.load(config_file)
-    links = ["rtsp://admin:admin@192.168.1.18:554/1/h264major", "rtsp://admin:admin@192.168.1.18:554/2/h264major",
-             "rtsp://admin:admin@192.168.1.18:554/3/h264major", "rtsp://admin:admin@192.168.1.18:554/4/h264major",
-             "rtsp://admin:admin@192.168.1.18:554/5/h264major", "rtsp://admin:admin@192.168.1.18:554/6/h264major"]*3
 
-    # links = ["data_files/videos_motion/test3.mp4" for _ in range(6)]
-
-    Motion = [MoveDetector(link) for link in links]
-    MotionOne = MoveDetector("data_files/videos_motion/test3.mp4")
-    # MotionOne = MoveDetector("rtsp://admin:admin@192.168.1.18:554/1/h264major")
+    # links = ["data_files/videos_motion/test3.mp4" for _ in range(2)]
+    # ids = [x for x in range(1, 6)]
+    ids = ['18', '52']
+    # Motion = [MoveDetector(link) for link in links]
+    Motion = [MoveDetector(id_) for id_ in ids]
 
     fpeses = []
     while True:

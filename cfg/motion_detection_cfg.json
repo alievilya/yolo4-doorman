@@ -3,8 +3,8 @@
   "source": "rtsp://admin:admin@192.168.1.18:554/1/h264major",
   "source_mobo": "http://192.168.0.53/control/faststream.jpg?stream=full&preview&previewsize=640x480&quality=60&fps=25.0&camera=right",
   "FRAMES_TO_PERSIST" : 5,
-  "MIN_SIZE_FOR_MOVEMENT" : 100,
-  "MOVEMENT_DETECTED_PERSISTENCE" : 200,
+  "MIN_SIZE_FOR_MOVEMENT" : 400,
+  "MOVEMENT_DETECTED_PERSISTENCE" : 50,
   "draw_rect" : "False"
 
 }
