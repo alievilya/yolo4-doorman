@@ -32,6 +32,7 @@ class MoveDetector():
         # Init frame variables
         self.around_door_array = [None, None, None, None]
         self.cap = None
+        self.ret = None
         self.first_frame = None
         self.next_frame = None
         self.font = cv2.FONT_HERSHEY_SIMPLEX
@@ -74,8 +75,7 @@ class MoveDetector():
         if self.output_video:
             if self.output_video.isOpened():
                 self.output_video.write(self.frame)
-            else:
-                print('start writing')
+                print('writing')
 
     def gen_meta(self):
         self.meta_file["camera_id"] = self.camera_id
@@ -204,33 +204,14 @@ class MoveDetector():
             # fps = round(1 / delta_time)
             # print('fps = ', fps)
 
-            cv2.imshow("{}".format(self.link), self.frame)
-            key = cv2.waitKey(1)
-            if key == ord('q'):
-                self.cap.release()
-                cv2.destroyAllWindows()
-                exit(1)
+            # cv2.imshow("{}".format(self.link), self.frame)
+            # key = cv2.waitKey(1)
+            # if key == ord('q'):
+            #     self.cap.release()
+            #     cv2.destroyAllWindows()
+            #     exit(1)
 
 
-class Worker(threading.Thread):
-
-    def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs=None, *, daemon=None, num_thread, motion, link):
-        # вызываем конструктор базового класса
-        super().__init__()
-        # определяем аргументы собственного класса
-        self.num_thread = num_thread
-        self.motion = motion
-
-    def run(self):
-        # pass
-        # теперь код функции 'worker()', которая должна
-        # выполняться в отдельных потоках будет здесь
-
-        print(f'Старт потока №{self.num_thread}')
-        self.motion.run_detection()
-        # time.sleep(0)
-        print(f'Завершение работы потока №{self.num_thread}')
 
 if __name__ == "__main__":
     with open("cfg/motion_detection_cfg.json") as config_file:
