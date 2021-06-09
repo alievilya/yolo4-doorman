@@ -244,6 +244,19 @@ if __name__ == "__main__":
         for ch in channels:
             ch.join()
 
+        delta_time = (time.time() - t0)
+        fps = round(1 / delta_time)
+        print('fps = ', fps)
+        if len(fpeses) < 35:
+            fpeses.append(fps)
+            print(delta_time)
+        elif len(fpeses) == 35:
+            # fps = round(np.median(np.array(fpeses)))
+            median_fps = float(np.median(np.array(fpeses)))
+            fps = round(median_fps, 2)
+            print('fps set: ', fps)
+            fpeses.append(fps)
+
         # ch1 = threading.Thread(target=Motion[0].loop_detection, daemon=True)
         # ch1.start()
         # ch2 = threading.Thread(target=Motion[1].loop_detection, daemon=True)
@@ -261,31 +274,6 @@ if __name__ == "__main__":
         #     print('2 alive')
         # ch1.join()
         # ch2.join()
-
-
-        # main_thread = threading.main_thread()
-        # # # объединим потоки, что бы дождаться их выполнения
-        # for t in threading.enumerate():
-        #     # Список 'threading.enumerate()' включает в себя основной
-        #     # поток и т.к. присоединение основного потока самого к себе
-        #     # вызывает взаимоблокировку, то его необходимо пропустить
-        #     if t is main_thread:
-        #         continue
-        #     # print(f'Ожидание выполнения потока {t.name}')
-        #     t.join()
-
-        # delta_time = (time.time() - t0)
-        # fps = round(1 / delta_time)
-        # print('fps = ', fps)
-        # if len(fpeses) < 35:
-        #     fpeses.append(fps)
-        #     print(delta_time)
-        # elif len(fpeses) == 35:
-        #     # fps = round(np.median(np.array(fpeses)))
-        #     median_fps = float(np.median(np.array(fpeses)))
-        #     fps = round(median_fps, 2)
-        #     print('fps set: ', fps)
-        #     fpeses.append(fps)
 
     # Cleanup when closed
     # cv2.destroyAllWindows()
