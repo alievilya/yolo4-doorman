@@ -48,9 +48,9 @@ class MoveDetector():
 
 
     def load_doors(self):
-        with open("data_files/around_doors_info.json") as doors_config:
+        with open("cfg/around_doors_info.json") as doors_config:
             self.around_doors_config = json.load(doors_config)
-        self.around_door_array = self.around_doors_config[self.link]
+        self.around_door_array = self.around_doors_config[self.camera_id]
         self.rect_around_door = Rectangle(self.around_door_array[0], self.around_door_array[1],
                                           self.around_door_array[2], self.around_door_array[3])
 
@@ -147,7 +147,7 @@ class MoveDetector():
                 # Draw a rectangle around big enough movements
                 top_coords = (x, y)
                 bot_coords = (x + w, y + h)
-                if config["draw_rect"]:
+                if config["draw_rect"] == "True":
                     cv2.rectangle(self.frame, top_coords, bot_coords, (0, 255, 0), 2)
                 coords = top_coords + bot_coords
                 self.contours.append(coords)

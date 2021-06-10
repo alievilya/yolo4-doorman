@@ -98,7 +98,7 @@ def select_object(img):
     return bbox_list_rois
 
 
-def read_door_info(name='doors_info.json'):
+def read_door_info(name='doors_info_links.json'):
     door_info = {}
     with open(name, 'r') as file:
         lines = file.readlines()
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         door = select_object(first_frame)
         doors_arr[file] = door
 
-    with open('doors_info.json', 'w') as f:
+    with open('doors_info_links.json', 'w') as f:
         for name in doors_arr.keys():
             f.write(str(name) + ';' + str(doors_arr[name]) + '\n')
 

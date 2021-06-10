@@ -157,7 +157,7 @@ def main(yolo):
     tracker = Tracker(metric)
 
     show_detections = True
-    writeVideo_flag = False
+    save_video_flag = False
     asyncVideo_flag = False
     fps = 0.0
     # fpeses = []
@@ -166,6 +166,8 @@ def main(yolo):
 
     # from here should start loop to process videos from folder
     for video_name in os.listdir(input_folder):
+        if not video_name.endswith('.mp4'):
+            continue
         # video_name = 'test1.mp4'
         output_format = '.mp4'
         print("opening video: {}".format(video_name))
@@ -289,14 +291,14 @@ def main(yolo):
                     if vector_person[1] > 50 and counter.people_init[val] == 2 \
                             and ratio < 0.6:  # and counter.people_bbox[val][3] > border_door \
                         counter.get_out()
-                        writeVideo_flag = True
+                        save_video_flag = True
                         #  TODO save video in output_folder
                         print(vector_person[1], counter.people_init[val], ratio)
 
                     elif vector_person[1] < -50 and counter.people_init[val] == 1 \
                             and ratio >= 0.6:
                         counter.get_in()
-                        writeVideo_flag = True
+                        save_video_flag = True
                         print(vector_person[1], counter.people_init[val], ratio)
 
                     counter.people_init[val] = -1
@@ -311,11 +313,7 @@ def main(yolo):
             # cv2.resizeWindow('video', 1422, 800)
             cv2.imshow('video33', frame)
 
-            # if writeVideo_flag:
-            out.write(frame)
-
             fps_imutils.update()
-
             if not asyncVideo_flag:
                 fps = (fps + (1. / (time.time() - t1))) / 2
                 print("FPS = %f" % fps)
@@ -340,12 +338,17 @@ def main(yolo):
             del video_capture
         else:
             video_capture.release()
-        if writeVideo_flag:
+        if save_video_flag:
             with open('videos_saved/log_results.txt', 'a') as log:
                 log.write(
                     'time: {}, camera id: {}, detected move in: {}, out: {}\n'.format(video_name, camera_id, ins, outs))
                 log.write('video written {}\n\n'.format(output_name))
             out.release()
+        else:
+            if out.isOpened():
+                out.release()
+                if os.path.exists(output_name):
+                    os.remove(output_name)
 
         cv2.destroyAllWindows()
 
