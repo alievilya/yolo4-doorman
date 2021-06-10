@@ -1,7 +1,7 @@
 {
   "output_folder": "videos_saved/",
-  "input_folder" :"data_files/videos_motion/",
-  "meta_folder": "data_files/videos_meta/",
+  "input_folder" :"data_files/videos_motion/test_videos/",
+  "meta_folder": "data_files/videos_meta/test_videos/",
   "tracking_model": "model_data/mars-small128.pb",
   "source": "data_files/in_1.mp4",
   "source0": "rtsp://admin:admin@192.168.1.18:554/1/h264major",

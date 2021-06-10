@@ -79,6 +79,7 @@ class MoveDetector():
 
     def gen_meta(self):
         self.meta_file["camera_id"] = self.camera_id
+        self.meta_file["link"] = self.link
 
     def write_meta(self):
         self.gen_meta()
@@ -189,7 +190,6 @@ class MoveDetector():
                 if not self.video_name:
                     hour_greenwich = strftime("%H", gmtime())
                     # f'{self.link}_' +
-                    # TODO add kinda link to the video, write meta
                     hour_moscow = str(int(hour_greenwich) + 3)
                     self.video_name = hour_moscow + strftime("_%M_%S", gmtime()) + '.mp4'
                 output_name = 'data_files/videos_motion/' + self.video_name
@@ -203,14 +203,6 @@ class MoveDetector():
             # delta_time = (time.time() - t0)
             # fps = round(1 / delta_time)
             # print('fps = ', fps)
-
-            # cv2.imshow("{}".format(self.link), self.frame)
-            # key = cv2.waitKey(1)
-            # if key == ord('q'):
-            #     self.cap.release()
-            #     cv2.destroyAllWindows()
-            #     exit(1)
-
 
 
 if __name__ == "__main__":

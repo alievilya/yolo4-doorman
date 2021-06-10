@@ -4,7 +4,7 @@ from functools import wraps
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.compat.v1.keras import backend as K
+from tensorflow.keras import backend as K
 #from keras.engine.base_layer import Layer
 from tensorflow.keras.layers import Layer
 from tensorflow.keras.layers import Conv2D, Add, ZeroPadding2D, UpSampling2D, Concatenate, MaxPooling2D

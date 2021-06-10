@@ -25,8 +25,8 @@ from videocaptureasync import VideoCaptureAsync
 from yolo import YOLO
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
 
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 config = tf.compat.v1.ConfigProto()
 config.gpu_options.allow_growth = True
@@ -142,7 +142,7 @@ def main(yolo):
     # Definition of the parameters
     with open("cfg/detection_tracker_cfg.json") as detection_config:
         detect_config = json.load(detection_config)
-    with open("data_files/doors_info.json") as doors_config:
+    with open("cfg/doors_info.json") as doors_config:
         doors_config = json.load(doors_config)
     model_filename = detect_config["tracking_model"]
     input_folder, output_folder = detect_config["input_folder"], detect_config["output_folder"]
@@ -302,9 +302,9 @@ def main(yolo):
                     counter.people_init[val] = -1
 
             ins, outs = counter.return_counter()
-            cv2.rectangle(frame, (frame.shape[1]-150, 0), (frame.shape[1], 50),
+            cv2.rectangle(frame, (frame.shape[1] - 150, 0), (frame.shape[1], 50),
                           (0, 0, 0), -1, 8)
-            cv2.putText(frame, "in: {}, out: {} ".format(ins, outs), (frame.shape[1]-140, 20), 0,
+            cv2.putText(frame, "in: {}, out: {} ".format(ins, outs), (frame.shape[1] - 140, 20), 0,
                         1e-3 * frame.shape[0], (255, 255, 255), 3)
 
             # cv2.namedWindow('video33', cv2.WINDOW_NORMAL)
@@ -353,5 +353,5 @@ def main(yolo):
 if __name__ == '__main__':
     tf.debugging.set_log_device_placement(True)
     gpus = tf.config.list_logical_devices('GPU')
-    with tf.device(gpus[1].name):
+    with tf.device(gpus[0].name):
         main(YOLO())
