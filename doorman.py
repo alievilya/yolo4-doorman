@@ -178,12 +178,13 @@ def main(yolo):
         conn, addr = sock.accept()
         with conn:
             print('Connected by', addr)
-
+            #  loop over all videos
             while True:
                 data = conn.recv(100)
-                video_motion = data.decode("utf-8")
+                video_motion_list = data.decode("utf-8").split(';')
                 videos_que = deque()
-                videos_que.append(video_motion)
+                for video_motion in video_motion_list:
+                    videos_que.append(video_motion)
                 video_name = videos_que.popleft()
                 if not video_name.endswith('.mp4'):
                     continue
@@ -222,6 +223,7 @@ def main(yolo):
                 door_array = doors_config["{}".format(camera_id)]
                 rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
                 border_door = door_array[3]
+                #  loop over video
                 while True:
                     fps_imutils = imutils.video.FPS().start()
                     ret, frame = video_capture.read()
@@ -331,6 +333,7 @@ def main(yolo):
                     # cv2.namedWindow('video33', cv2.WINDOW_NORMAL)
                     # cv2.resizeWindow('video', 1422, 800)
                     cv2.imshow('video33', frame)
+                    out.write(frame)
 
                     fps_imutils.update()
                     if not asyncVideo_flag:
@@ -357,18 +360,22 @@ def main(yolo):
                     del video_capture
                 else:
                     video_capture.release()
-                if save_video_flag:
-                    with open('videos_saved/log_results.txt', 'a') as log:
+                with open('videos_saved/log_results.txt', 'a') as log:
+                    if save_video_flag:
                         log.write(
-                            'time: {}, camera id: {}, detected move in: {}, out: {}\n'.format(video_name, camera_id, ins, outs))
+                            'detected!!! time: {}, camera id: {}, detected move in: {}, out: {}\n'.format(
+                                video_name, camera_id, ins, outs))
                         log.write('video written {}\n\n'.format(output_name))
-                    out.release()
-                else:
-                    if out.isOpened():
                         out.release()
-                        if os.path.exists(output_name):
-                            os.remove(output_name)
-
+                    else:
+                        log.write(
+                            'processed. Time: {}, camera id: {}\n'.format(
+                                video_name, camera_id))
+                        if out.isOpened():
+                            out.release()
+                            if os.path.exists(output_name):
+                                os.remove(output_name)
+                save_video_flag = False
                 cv2.destroyAllWindows()
 
 

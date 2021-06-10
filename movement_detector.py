@@ -87,7 +87,7 @@ class MoveDetector():
             json.dump(self.meta_file, wr)
 
     def send_socket(self):
-        self.sock.sendall(bytes(self.video_name, "utf-8"))
+        self.sock.sendall(bytes(self.video_name + ';', "utf-8"))
         # data = sock.recv(100)
         # print('Received: ', repr(data.decode("utf-8")))
 
@@ -171,8 +171,8 @@ class MoveDetector():
             text = "No Movement Detected"
             self.stop_writing = True
             return self.frame, []
-
-        cv2.putText(self.frame, str(text), (10, 35), self.font, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+        if config["draw_rect"] == "True":
+            cv2.putText(self.frame, str(text), (10, 35), self.font, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
 
         # self.frame_delta = cv2.cvtColor(self.frame_delta, cv2.COLOR_GRAY2BGR)
     def loop_detection(self):
