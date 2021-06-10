@@ -238,18 +238,18 @@ if __name__ == "__main__":
             for ch in channels:
                 ch.join()
 
-            delta_time = (time.time() - t0)
-            fps = round(1 / delta_time)
-            print('fps = ', fps)
-            if len(fpeses) < 35:
-                fpeses.append(fps)
-                print(delta_time)
-            elif len(fpeses) == 35:
-                # fps = round(np.median(np.array(fpeses)))
-                median_fps = float(np.median(np.array(fpeses)))
-                fps = round(median_fps, 2)
-                print('fps set: ', fps)
-                fpeses.append(fps)
+            # delta_time = (time.time() - t0)
+            # fps = round(1 / delta_time)
+            # print('fps = ', fps)
+            # if len(fpeses) < 35:
+            #     fpeses.append(fps)
+            #     print(delta_time)
+            # elif len(fpeses) == 35:
+            #     # fps = round(np.median(np.array(fpeses)))
+            #     median_fps = float(np.median(np.array(fpeses)))
+            #     fps = round(median_fps, 2)
+            #     print('fps set: ', fps)
+            #     fpeses.append(fps)
 
     # Cleanup when closed
     # cv2.destroyAllWindows()
