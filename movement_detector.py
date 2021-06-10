@@ -15,17 +15,17 @@ import json
 import time
 from time import gmtime, strftime
 import threading
-
 import cv2
 import numpy as np
-
+import socket
 import imutils
-
 from rectangles import Rectangle, find_ratio_ofbboxes
 from videocaptureasync import VideoCaptureAsync
 
+
 class MoveDetector():
-    def __init__(self, id):
+    def __init__(self, id, sock):
+        self.sock = sock
         self.camera_id = id
         # self.link = link
         self.link = "rtsp://admin:admin@192.168.1.{}:554/1/h264major".format(self.camera_id)
@@ -86,6 +86,11 @@ class MoveDetector():
         with open(self.videos_meta_folder + self.video_name[:-4] + '.json', 'w') as wr:
             json.dump(self.meta_file, wr)
 
+    def send_socket(self):
+        self.sock.sendall(bytes(self.video_name, "utf-8"))
+        # data = sock.recv(100)
+        # print('Received: ', repr(data.decode("utf-8")))
+
     def release_video(self, frame):
         if self.output_video:
             # if self.output_video.isOpened():
@@ -95,13 +100,14 @@ class MoveDetector():
             print('released')
             self.stop_writing = False
             self.output_video = None
+            if self.sock:
+                self.send_socket()
 
     def move_near_door(self, contours):
         if len(contours) > 0:
             return True
         else:
             return False
-
 
 
     def detect_movement(self, config):
@@ -205,67 +211,45 @@ class MoveDetector():
             # print('fps = ', fps)
 
 
+HOST = "localhost"
+PORT = 8075
+
 if __name__ == "__main__":
     with open("cfg/motion_detection_cfg.json") as config_file:
         config = json.load(config_file)
-
-    # links = ["data_files/videos_motion/test3.mp4" for _ in range(2)]
-    # ids = [x for x in range(1, 6)]
     ids = ['18', '52']
-    # Motion = [MoveDetector(link) for link in links]
-    Motion = [MoveDetector(id_) for id_ in ids]
 
     fpeses = []
-    while True:
-        t0 = time.time()
-        # for i, MotionChannel in enumerate(Motion):
-        #     ch = threading.Thread(target=MotionChannel.loop_detection, daemon=True)
-        #     if not ch.is_alive() or not ch.ident:
-        #         print('start channel')
-        #         ch.start()
-        # MotionOne.run_detection()
 
-        channels = [threading.Thread(target=Mot.loop_detection, daemon=True) for Mot in Motion]
-        for i, ch in enumerate(channels):
-            # ch.start()
-            if not ch.is_alive():
-                print(f"{Motion[i].link} \n")
-                ch.start()
-            else:
-                print(f"{Motion[i].link} is alive")
-        for ch in channels:
-            ch.join()
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        Motion = [MoveDetector(id_, sock) for id_ in ids]
+        sock.connect((HOST, PORT))
 
-        delta_time = (time.time() - t0)
-        fps = round(1 / delta_time)
-        print('fps = ', fps)
-        if len(fpeses) < 35:
-            fpeses.append(fps)
-            print(delta_time)
-        elif len(fpeses) == 35:
-            # fps = round(np.median(np.array(fpeses)))
-            median_fps = float(np.median(np.array(fpeses)))
-            fps = round(median_fps, 2)
-            print('fps set: ', fps)
-            fpeses.append(fps)
+        while True:
+            t0 = time.time()
+            channels = [threading.Thread(target=Mot.loop_detection, daemon=True) for Mot in Motion]
+            for i, ch in enumerate(channels):
+                # ch.start()
+                if not ch.is_alive():
+                    print(f"{Motion[i].link} \n")
+                    ch.start()
+                else:
+                    print(f"{Motion[i].link} is alive")
+            for ch in channels:
+                ch.join()
 
-        # ch1 = threading.Thread(target=Motion[0].loop_detection, daemon=True)
-        # ch1.start()
-        # ch2 = threading.Thread(target=Motion[1].loop_detection, daemon=True)
-        # ch2.start()
-        # if not ch1.is_alive():
-        #     print("chanel 1 ________")
-        #     ch1.start()
-        # else:
-        #     print('1 alive')
-        #
-        # if not ch2.is_alive():
-        #     print("chanel 2 ________")
-        #     ch2.start()
-        # else:
-        #     print('2 alive')
-        # ch1.join()
-        # ch2.join()
+            delta_time = (time.time() - t0)
+            fps = round(1 / delta_time)
+            print('fps = ', fps)
+            if len(fpeses) < 35:
+                fpeses.append(fps)
+                print(delta_time)
+            elif len(fpeses) == 35:
+                # fps = round(np.median(np.array(fpeses)))
+                median_fps = float(np.median(np.array(fpeses)))
+                fps = round(median_fps, 2)
+                print('fps set: ', fps)
+                fpeses.append(fps)
 
     # Cleanup when closed
     # cv2.destroyAllWindows()

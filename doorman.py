@@ -13,7 +13,10 @@ import cv2
 import imutils.video
 import numpy as np
 import tensorflow as tf
+import socket
+
 from PIL import Image
+from collections import deque
 
 from deep_sort import nn_matching
 from deep_sort import preprocessing
@@ -165,192 +168,208 @@ def main(yolo):
     check_gpu()
 
     # from here should start loop to process videos from folder
-    for video_name in os.listdir(input_folder):
-        if not video_name.endswith('.mp4'):
-            continue
-        # video_name = 'test1.mp4'
-        output_format = '.mp4'
-        print("opening video: {}".format(video_name))
-        full_video_path = join(input_folder, video_name)
-        # full_video_path = "rtsp://admin:admin@192.168.1.52:554/1/h264major"
+    # for video_name in os.listdir(input_folder):
 
-        meta_name = meta_folder + video_name[:-4] + ".json"
-        with open(meta_name) as meta_config_json:
-            meta_config = json.load(meta_config_json)
-        camera_id = meta_config["camera_id"]
-        if not os.path.exists(output_folder + str(camera_id)):
-            os.mkdir(output_folder + str(camera_id))
+    HOST = "localhost"
+    PORT = 8075
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind((HOST, PORT))
+        sock.listen()
+        conn, addr = sock.accept()
+        with conn:
+            print('Connected by', addr)
 
-        output_name = output_folder + camera_id + '/out_' + video_name
-        counter = Counter(counter_in=0, counter_out=0, track_id=0)
-
-        if asyncVideo_flag:
-            video_capture = VideoCaptureAsync(full_video_path)
-        else:
-            video_capture = cv2.VideoCapture(full_video_path)
-
-        if asyncVideo_flag:
-            video_capture.start()
-            w = int(video_capture.cap.get(3))
-            h = int(video_capture.cap.get(4))
-        else:
-            w = int(video_capture.get(3))
-            h = int(video_capture.get(4))
-
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        out = cv2.VideoWriter(output_name, fourcc, 25, (w, h))
-
-        door_array = doors_config["{}".format(camera_id)]
-        rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
-        border_door = door_array[3]
-        while True:
-            fps_imutils = imutils.video.FPS().start()
-            ret, frame = video_capture.read()
-            if not ret:
-                break
-            t1 = time.time()
-            # lost_ids = counter.return_lost_ids()
-            image = Image.fromarray(frame[..., ::-1])  # bgr to rgb
-            boxes, confidence, classes = yolo.detect_image(image)
-
-            features = encoder(frame, boxes)
-            detections = [Detection(bbox, confidence, cls, feature) for bbox, confidence, cls, feature in
-                          zip(boxes, confidence, classes, features)]
-
-            # Run non-maxima suppression.
-            boxes = np.array([d.tlwh for d in detections])
-            scores = np.array([d.confidence for d in detections])
-            classes = np.array([d.cls for d in detections])
-            indices = preprocessing.non_max_suppression(boxes, nms_max_overlap, scores)
-            detections = [detections[i] for i in indices]
-
-            # Call the tracker
-            tracker.predict()
-            tracker.update(detections)
-
-            cv2.rectangle(frame, (int(door_array[0]), int(door_array[1])), (int(door_array[2]), int(door_array[3])),
-                          (23, 158, 21), 3)
-            if len(detections) != 0:
-                counter.someone_inframe()
-                for det in detections:
-                    bbox = det.to_tlbr()
-                    if show_detections and len(classes) > 0:
-                        score = "%.2f" % (det.confidence * 100) + "%"
-                        cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 3)
-            else:
-                if counter.need_to_clear():
-                    counter.clear_all()
-            # identities = [track.track_id for track in tracker.tracks]
-            # counter.update_identities(identities)
-
-            for track in tracker.tracks:
-                if not track.is_confirmed() or track.time_since_update > 1:
+            while True:
+                data = conn.recv(100)
+                video_motion = data.decode("utf-8")
+                videos_que = deque()
+                videos_que.append(video_motion)
+                video_name = videos_que.popleft()
+                if not video_name.endswith('.mp4'):
                     continue
-                bbox = track.to_tlbr()
+                # video_name = 'test1.mp4'
+                output_format = '.mp4'
+                print("opening video: {}".format(video_name))
+                full_video_path = join(input_folder, video_name)
+                # full_video_path = "rtsp://admin:admin@192.168.1.52:554/1/h264major"
 
-                if track.track_id not in counter.people_init or counter.people_init[track.track_id] == 0:
-                    # counter.obj_initialized(track.track_id)
-                    ratio_init = find_ratio_ofbboxes(bbox=bbox, rect_compare=rect_door)
+                meta_name = meta_folder + video_name[:-4] + ".json"
+                with open(meta_name) as meta_config_json:
+                    meta_config = json.load(meta_config_json)
+                camera_id = meta_config["camera_id"]
+                if not os.path.exists(output_folder + str(camera_id)):
+                    os.mkdir(output_folder + str(camera_id))
 
-                    if ratio_init > 0:
-                        if ratio_init >= 0.5:  # and bbox[3] < door_array[3]:
-                            counter.people_init[track.track_id] = 2  # man in the door
-                        elif ratio_init < 0.5:  # and bbox[3] > door_array[3]:  # initialized in the outside
-                            counter.people_init[track.track_id] = 1
+                output_name = output_folder + camera_id + '/out_' + video_name
+                counter = Counter(counter_in=0, counter_out=0, track_id=0)
+
+                if asyncVideo_flag:
+                    video_capture = VideoCaptureAsync(full_video_path)
+                else:
+                    video_capture = cv2.VideoCapture(full_video_path)
+
+                if asyncVideo_flag:
+                    video_capture.start()
+                    w = int(video_capture.cap.get(3))
+                    h = int(video_capture.cap.get(4))
+                else:
+                    w = int(video_capture.get(3))
+                    h = int(video_capture.get(4))
+
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                out = cv2.VideoWriter(output_name, fourcc, 25, (w, h))
+
+                door_array = doors_config["{}".format(camera_id)]
+                rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
+                border_door = door_array[3]
+                while True:
+                    fps_imutils = imutils.video.FPS().start()
+                    ret, frame = video_capture.read()
+                    if not ret:
+                        break
+                    t1 = time.time()
+                    # lost_ids = counter.return_lost_ids()
+                    image = Image.fromarray(frame[..., ::-1])  # bgr to rgb
+                    boxes, confidence, classes = yolo.detect_image(image)
+
+                    features = encoder(frame, boxes)
+                    detections = [Detection(bbox, confidence, cls, feature) for bbox, confidence, cls, feature in
+                                  zip(boxes, confidence, classes, features)]
+
+                    # Run non-maxima suppression.
+                    boxes = np.array([d.tlwh for d in detections])
+                    scores = np.array([d.confidence for d in detections])
+                    classes = np.array([d.cls for d in detections])
+                    indices = preprocessing.non_max_suppression(boxes, nms_max_overlap, scores)
+                    detections = [detections[i] for i in indices]
+
+                    # Call the tracker
+                    tracker.predict()
+                    tracker.update(detections)
+
+                    cv2.rectangle(frame, (int(door_array[0]), int(door_array[1])), (int(door_array[2]), int(door_array[3])),
+                                  (23, 158, 21), 3)
+                    if len(detections) != 0:
+                        counter.someone_inframe()
+                        for det in detections:
+                            bbox = det.to_tlbr()
+                            if show_detections and len(classes) > 0:
+                                score = "%.2f" % (det.confidence * 100) + "%"
+                                cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 3)
                     else:
-                        counter.people_init[track.track_id] = 1
-                    counter.people_bbox[track.track_id] = bbox
-                counter.cur_bbox[track.track_id] = bbox
+                        if counter.need_to_clear():
+                            counter.clear_all()
+                    # identities = [track.track_id for track in tracker.tracks]
+                    # counter.update_identities(identities)
 
-                adc = "%.2f" % (track.adc * 100) + "%"  # Average detection confidence
-                cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 2)
-                cv2.putText(frame, "ID: " + str(track.track_id), (int(bbox[0]), int(bbox[1]) + 50), 0,
-                            1e-3 * frame.shape[0], (0, 255, 0), 3)
+                    for track in tracker.tracks:
+                        if not track.is_confirmed() or track.time_since_update > 1:
+                            continue
+                        bbox = track.to_tlbr()
 
-                if not show_detections:
-                    track_cls = track.cls
-                    cv2.putText(frame, str(track_cls), (int(bbox[0]), int(bbox[3])), 0, 1e-3 * frame.shape[0],
-                                (0, 255, 0),
-                                3)
-                    cv2.putText(frame, 'ADC: ' + adc, (int(bbox[0]), int(bbox[3] + 2e-2 * frame.shape[1])), 0,
-                                1e-3 * frame.shape[0], (0, 255, 0), 3)
-                # if track.time_since_update >= 15:
-                #     id_get_lost.append(track.track_id)
-            id_get_lost = [track.track_id for track in tracker.tracks if track.time_since_update >= 35]
+                        if track.track_id not in counter.people_init or counter.people_init[track.track_id] == 0:
+                            # counter.obj_initialized(track.track_id)
+                            ratio_init = find_ratio_ofbboxes(bbox=bbox, rect_compare=rect_door)
 
-            for val in counter.people_init.keys():
-                ratio = 0
-                cur_c = find_centroid(counter.cur_bbox[val])
-                init_c = find_centroid(counter.people_bbox[val])
-                vector_person = (cur_c[0] - init_c[0],
-                                 cur_c[1] - init_c[1])
+                            if ratio_init > 0:
+                                if ratio_init >= 0.5:  # and bbox[3] < door_array[3]:
+                                    counter.people_init[track.track_id] = 2  # man in the door
+                                elif ratio_init < 0.5:  # and bbox[3] > door_array[3]:  # initialized in the outside
+                                    counter.people_init[track.track_id] = 1
+                            else:
+                                counter.people_init[track.track_id] = 1
+                            counter.people_bbox[track.track_id] = bbox
+                        counter.cur_bbox[track.track_id] = bbox
 
-                if val in id_get_lost and counter.people_init[val] != -1:
-                    ratio = find_ratio_ofbboxes(bbox=counter.cur_bbox[val], rect_compare=rect_door)
+                        adc = "%.2f" % (track.adc * 100) + "%"  # Average detection confidence
+                        cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 2)
+                        cv2.putText(frame, "ID: " + str(track.track_id), (int(bbox[0]), int(bbox[1]) + 50), 0,
+                                    1e-3 * frame.shape[0], (0, 255, 0), 3)
 
-                    if vector_person[1] > 50 and counter.people_init[val] == 2 \
-                            and ratio < 0.6:  # and counter.people_bbox[val][3] > border_door \
-                        counter.get_out()
-                        save_video_flag = True
-                        #  TODO save video in output_folder
-                        print(vector_person[1], counter.people_init[val], ratio)
+                        if not show_detections:
+                            track_cls = track.cls
+                            cv2.putText(frame, str(track_cls), (int(bbox[0]), int(bbox[3])), 0, 1e-3 * frame.shape[0],
+                                        (0, 255, 0),
+                                        3)
+                            cv2.putText(frame, 'ADC: ' + adc, (int(bbox[0]), int(bbox[3] + 2e-2 * frame.shape[1])), 0,
+                                        1e-3 * frame.shape[0], (0, 255, 0), 3)
+                        # if track.time_since_update >= 15:
+                        #     id_get_lost.append(track.track_id)
+                    id_get_lost = [track.track_id for track in tracker.tracks if track.time_since_update >= 35]
 
-                    elif vector_person[1] < -50 and counter.people_init[val] == 1 \
-                            and ratio >= 0.6:
-                        counter.get_in()
-                        save_video_flag = True
-                        print(vector_person[1], counter.people_init[val], ratio)
+                    for val in counter.people_init.keys():
+                        ratio = 0
+                        cur_c = find_centroid(counter.cur_bbox[val])
+                        init_c = find_centroid(counter.people_bbox[val])
+                        vector_person = (cur_c[0] - init_c[0],
+                                         cur_c[1] - init_c[1])
 
-                    counter.people_init[val] = -1
+                        if val in id_get_lost and counter.people_init[val] != -1:
+                            ratio = find_ratio_ofbboxes(bbox=counter.cur_bbox[val], rect_compare=rect_door)
 
-            ins, outs = counter.return_counter()
-            cv2.rectangle(frame, (frame.shape[1] - 150, 0), (frame.shape[1], 50),
-                          (0, 0, 0), -1, 8)
-            cv2.putText(frame, "in: {}, out: {} ".format(ins, outs), (frame.shape[1] - 140, 20), 0,
-                        1e-3 * frame.shape[0], (255, 255, 255), 3)
+                            if vector_person[1] > 50 and counter.people_init[val] == 2 \
+                                    and ratio < 0.6:  # and counter.people_bbox[val][3] > border_door \
+                                counter.get_out()
+                                save_video_flag = True
+                                #  TODO save video in output_folder
+                                print(vector_person[1], counter.people_init[val], ratio)
 
-            # cv2.namedWindow('video33', cv2.WINDOW_NORMAL)
-            # cv2.resizeWindow('video', 1422, 800)
-            cv2.imshow('video33', frame)
+                            elif vector_person[1] < -50 and counter.people_init[val] == 1 \
+                                    and ratio >= 0.6:
+                                counter.get_in()
+                                save_video_flag = True
+                                print(vector_person[1], counter.people_init[val], ratio)
 
-            fps_imutils.update()
-            if not asyncVideo_flag:
-                fps = (fps + (1. / (time.time() - t1))) / 2
-                print("FPS = %f" % fps)
+                            counter.people_init[val] = -1
 
-                # if len(fpeses) < 15:
-                #     fpeses.append(round(fps, 2))
-                #
-                # elif len(fpeses) == 15:
-                #     # fps = round(np.median(np.array(fpeses)))
-                #     median_fps = float(np.median(np.array(fpeses)))
-                #     fps = round(median_fps, 1)
-                #     print('max fps: ', fps)
-                #     # fps = 20
-                #     counter.fps = fps
-                #     fpeses.append(fps)
+                    ins, outs = counter.return_counter()
+                    cv2.rectangle(frame, (frame.shape[1] - 150, 0), (frame.shape[1], 50),
+                                  (0, 0, 0), -1, 8)
+                    cv2.putText(frame, "in: {}, out: {} ".format(ins, outs), (frame.shape[1] - 140, 20), 0,
+                                1e-3 * frame.shape[0], (255, 255, 255), 3)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                    # cv2.namedWindow('video33', cv2.WINDOW_NORMAL)
+                    # cv2.resizeWindow('video', 1422, 800)
+                    cv2.imshow('video33', frame)
 
-        if asyncVideo_flag:
-            video_capture.stop()
-            del video_capture
-        else:
-            video_capture.release()
-        if save_video_flag:
-            with open('videos_saved/log_results.txt', 'a') as log:
-                log.write(
-                    'time: {}, camera id: {}, detected move in: {}, out: {}\n'.format(video_name, camera_id, ins, outs))
-                log.write('video written {}\n\n'.format(output_name))
-            out.release()
-        else:
-            if out.isOpened():
-                out.release()
-                if os.path.exists(output_name):
-                    os.remove(output_name)
+                    fps_imutils.update()
+                    if not asyncVideo_flag:
+                        fps = (fps + (1. / (time.time() - t1))) / 2
+                        print("FPS = %f" % fps)
 
-        cv2.destroyAllWindows()
+                        # if len(fpeses) < 15:
+                        #     fpeses.append(round(fps, 2))
+                        #
+                        # elif len(fpeses) == 15:
+                        #     # fps = round(np.median(np.array(fpeses)))
+                        #     median_fps = float(np.median(np.array(fpeses)))
+                        #     fps = round(median_fps, 1)
+                        #     print('max fps: ', fps)
+                        #     # fps = 20
+                        #     counter.fps = fps
+                        #     fpeses.append(fps)
+
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+
+                if asyncVideo_flag:
+                    video_capture.stop()
+                    del video_capture
+                else:
+                    video_capture.release()
+                if save_video_flag:
+                    with open('videos_saved/log_results.txt', 'a') as log:
+                        log.write(
+                            'time: {}, camera id: {}, detected move in: {}, out: {}\n'.format(video_name, camera_id, ins, outs))
+                        log.write('video written {}\n\n'.format(output_name))
+                    out.release()
+                else:
+                    if out.isOpened():
+                        out.release()
+                        if os.path.exists(output_name):
+                            os.remove(output_name)
+
+                cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
