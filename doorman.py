@@ -228,6 +228,10 @@ def main(yolo):
                     fps_imutils = imutils.video.FPS().start()
                     ret, frame = video_capture.read()
                     if not ret:
+                        with open('videos_saved/log_results.txt', 'a') as log:
+                            log.write(
+                            'processed (ret). Time: {}, camera id: {}\n'.format(
+                                video_name, camera_id))
                         break
                     t1 = time.time()
                     # lost_ids = counter.return_lost_ids()
@@ -360,21 +364,19 @@ def main(yolo):
                     del video_capture
                 else:
                     video_capture.release()
-                with open('videos_saved/log_results.txt', 'a') as log:
-                    if save_video_flag:
+
+                if save_video_flag:
+                    with open('videos_saved/log_results.txt', 'a') as log:
                         log.write(
                             'detected!!! time: {}, camera id: {}, detected move in: {}, out: {}\n'.format(
                                 video_name, camera_id, ins, outs))
                         log.write('video written {}\n\n'.format(output_name))
                         out.release()
-                    else:
-                        log.write(
-                            'processed. Time: {}, camera id: {}\n'.format(
-                                video_name, camera_id))
-                        if out.isOpened():
-                            out.release()
-                            if os.path.exists(output_name):
-                                os.remove(output_name)
+                else:
+                    if out.isOpened():
+                        out.release()
+                        if os.path.exists(output_name):
+                            os.remove(output_name)
                 save_video_flag = False
                 cv2.destroyAllWindows()
 
