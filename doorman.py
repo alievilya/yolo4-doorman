@@ -147,6 +147,8 @@ def main(yolo):
         detect_config = json.load(detection_config)
     with open("cfg/doors_info.json") as doors_config:
         doors_config = json.load(doors_config)
+    with open("cfg/around_doors_info.json") as around_doors_config:
+        around_doors_config = json.load(around_doors_config)
     model_filename = detect_config["tracking_model"]
     input_folder, output_folder = detect_config["input_folder"], detect_config["output_folder"]
     meta_folder = detect_config["meta_folder"]
@@ -221,11 +223,12 @@ def main(yolo):
                 out = cv2.VideoWriter(output_name, fourcc, 25, (w, h))
 
                 door_array = doors_config["{}".format(camera_id)]
+                around_door_array = tuple(around_doors_config["{}".format(camera_id)])
                 rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
                 border_door = door_array[3]
                 #  loop over video
-                save_video_flag = False
                 while True:
+                    save_video_flag = False
                     fps_imutils = imutils.video.FPS().start()
                     ret, frame = video_capture.read()
                     if not ret:
@@ -237,6 +240,7 @@ def main(yolo):
                     t1 = time.time()
                     # lost_ids = counter.return_lost_ids()
                     image = Image.fromarray(frame[..., ::-1])  # bgr to rgb
+                    image = image.crop(around_door_array)
                     boxes, confidence, classes = yolo.detect_image(image)
 
                     features = encoder(frame, boxes)
@@ -336,7 +340,7 @@ def main(yolo):
 
                     # cv2.namedWindow('video33', cv2.WINDOW_NORMAL)
                     # cv2.resizeWindow('video', 1422, 800)
-                    cv2.imshow('video33', frame)
+                    # cv2.imshow('video33', frame)
                     out.write(frame)
 
                     fps_imutils.update()
@@ -371,13 +375,17 @@ def main(yolo):
                             'detected!!! time: {}, camera id: {}, detected move in: {}, out: {}\n'.format(
                                 video_name, camera_id, ins, outs))
                         log.write('video written {}\n\n'.format(output_name))
-                        out.release()
+                    out.release()
                 else:
                     if out.isOpened():
                         out.release()
                         if os.path.exists(output_name):
                             os.remove(output_name)
-
+                # if os.path.exists(full_video_path):
+                #     os.remove(full_video_path)
+                # if os.path.exists(meta_name):
+                #     os.remove(meta_name)
+                save_video_flag = False
                 cv2.destroyAllWindows()
 
 
