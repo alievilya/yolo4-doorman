@@ -22,9 +22,9 @@ import os
 
 class YOLO(object):
     def __init__(self):
-        self.model_path = 'model_data/yolo4_head.h5'
+        self.model_path = 'model_data/yolo4_weight_416.h5'
         self.anchors_path = 'model_data/yolo_anchors.txt'
-        self.classes_path = 'model_data/head_classes.txt'
+        self.classes_path = 'model_data/coco_classes.txt'
         self.gpu_num = 1
         self.score = 0.4
         self.iou = 0.5

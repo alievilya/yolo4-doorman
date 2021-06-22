@@ -217,7 +217,7 @@ PORT = 8075
 if __name__ == "__main__":
     with open("cfg/motion_detection_cfg.json") as config_file:
         config = json.load(config_file)
-    ids = ['18', '52']
+    ids = ['54', '52']
 
     fpeses = []
 

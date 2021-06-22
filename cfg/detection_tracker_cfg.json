@@ -4,7 +4,7 @@
   "meta_folder": "data_files/videos_meta/",
   "tracking_model": "model_data/mars-small128.pb",
   "source": "data_files/in_1.mp4",
-  "source0": "rtsp://admin:admin@192.168.1.18:554/1/h264major",
+  "source0": "rtsp://admin:admin@192.168.1.54:554/1/h264major",
   "weights": "weights/best14x-49.pt",
   "config_deepsort": "deep_sort_pytorch/configs/deep_sort.yaml",
   "cfg": "cfg/csdarknet53s-panet-spp.cfg",

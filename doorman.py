@@ -180,7 +180,7 @@ def main(yolo):
             print('Connected by', addr)
             #  loop over all videos
             while True:
-                data = conn.recv(100)
+                data = conn.recv(1000)
                 video_motion_list = data.decode("utf-8").split(';')
                 videos_que = deque()
                 for video_motion in video_motion_list:
@@ -224,6 +224,7 @@ def main(yolo):
                 rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
                 border_door = door_array[3]
                 #  loop over video
+                save_video_flag = False
                 while True:
                     fps_imutils = imutils.video.FPS().start()
                     ret, frame = video_capture.read()
@@ -301,7 +302,7 @@ def main(yolo):
                                         1e-3 * frame.shape[0], (0, 255, 0), 3)
                         # if track.time_since_update >= 15:
                         #     id_get_lost.append(track.track_id)
-                    id_get_lost = [track.track_id for track in tracker.tracks if track.time_since_update >= 35]
+                    id_get_lost = [track.track_id for track in tracker.tracks if track.time_since_update >= 15]
 
                     for val in counter.people_init.keys():
                         ratio = 0
@@ -317,7 +318,6 @@ def main(yolo):
                                     and ratio < 0.6:  # and counter.people_bbox[val][3] > border_door \
                                 counter.get_out()
                                 save_video_flag = True
-                                #  TODO save video in output_folder
                                 print(vector_person[1], counter.people_init[val], ratio)
 
                             elif vector_person[1] < -50 and counter.people_init[val] == 1 \
@@ -377,7 +377,7 @@ def main(yolo):
                         out.release()
                         if os.path.exists(output_name):
                             os.remove(output_name)
-                save_video_flag = False
+
                 cv2.destroyAllWindows()
 
 
