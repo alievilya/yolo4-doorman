@@ -1,7 +1,7 @@
-import cv2
-import os
-import numpy as np
 import json
+import os
+
+import cv2
 
 from rectangles import select_object
 
@@ -22,7 +22,6 @@ def read_door_info(name=None):
 if __name__ == "__main__":
     # with open('cfg/camera_link_to_id.json') as json_file:
     #     link2id_dict = json.load(json_file)
-
 
     folder = 'data_files/videos_motion/videos_settings'
     files = os.listdir(folder)
@@ -60,8 +59,6 @@ if __name__ == "__main__":
         if len(door_around) != 0:
             door_around = door_around[0]
         around_doors_dict[cam_id] = door_around
-
-
 
     mode = 'a' if os.path.exists('cfg/doors_info.json') else 'w'
     with open('cfg/doors_info.json', 'w') as f:

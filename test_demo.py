@@ -1,19 +1,11 @@
 import os
-import colorsys
 
+import cv2
 import numpy as np
-from tensorflow.compat.v1.keras import backend as K
-from tensorflow.keras.models import load_model
+from decode_np import Decode
 from tensorflow.keras.layers import Input
 
-from yolo4.model import yolo_eval, yolo4_body
-from yolo4.utils import letterbox_image
-
-from PIL import Image, ImageFont, ImageDraw
-from timeit import default_timer as timer
-import cv2
-
-from decode_np import Decode
+from yolo4.model import yolo4_body
 
 
 def get_class(classes_path):
@@ -23,12 +15,14 @@ def get_class(classes_path):
     class_names = [c.strip() for c in class_names]
     return class_names
 
+
 def get_anchors(anchors_path):
     anchors_path = os.path.expanduser(anchors_path)
     with open(anchors_path) as f:
         anchors = f.readline()
     anchors = [float(x) for x in anchors.split(',')]
     return np.array(anchors).reshape(-1, 2)
+
 
 if __name__ == '__main__':
     print('Please visit https://github.com/miemie2013/Keras-YOLOv4 for more complete model!')
@@ -49,7 +43,7 @@ if __name__ == '__main__':
     conf_thresh = 0.2
     nms_thresh = 0.45
 
-    yolo4_model = yolo4_body(Input(shape=model_image_size+(3,)), num_anchors//3, num_classes)
+    yolo4_model = yolo4_body(Input(shape=model_image_size + (3,)), num_anchors // 3, num_classes)
 
     model_path = os.path.expanduser(model_path)
     assert model_path.endswith('.h5'), 'Keras model or weights must be a .h5 file.'

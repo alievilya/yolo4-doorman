@@ -12,15 +12,14 @@ Run the script with a working webcam! You'll see how it works!
 """
 
 import json
+import socket
+import threading
 import time
 from time import gmtime, strftime
-import threading
+
 import cv2
-import numpy as np
-import socket
-import imutils
-from rectangles import Rectangle, find_ratio_ofbboxes
-from videocaptureasync import VideoCaptureAsync
+
+from rectangles import Rectangle
 
 
 class MoveDetector():
@@ -45,7 +44,6 @@ class MoveDetector():
         self.videos_meta_folder = "data_files/videos_meta/"
         self.meta_file = {}
         self.video_name = None
-
 
     def load_doors(self):
         with open("cfg/around_doors_info.json") as doors_config:
@@ -108,7 +106,6 @@ class MoveDetector():
             return True
         else:
             return False
-
 
     def detect_movement(self, config):
         if not self.ret:
@@ -175,6 +172,7 @@ class MoveDetector():
             cv2.putText(self.frame, str(text), (10, 35), self.font, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
 
         # self.frame_delta = cv2.cvtColor(self.frame_delta, cv2.COLOR_GRAY2BGR)
+
     def loop_detection(self):
         # print('opening link: ', self.link)
 

@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division, print_function, absolute_import
-import json
 
+import json
+import os
+import socket
 import warnings
 from collections import OrderedDict
+from collections import deque
 from os.path import join
 from timeit import time
 
@@ -13,21 +16,16 @@ import cv2
 import imutils.video
 import numpy as np
 import tensorflow as tf
-import socket
-
 from PIL import Image
-from collections import deque
 
 from deep_sort import nn_matching
 from deep_sort import preprocessing
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
-from rectangles import find_centroid, Rectangle, find_ratio_ofbboxes, rect_square
+from rectangles import find_centroid, Rectangle, find_ratio_ofbboxes
 from tools import generate_detections as gdet
 from videocaptureasync import VideoCaptureAsync
 from yolo import YOLO
-
-import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -234,8 +232,8 @@ def main(yolo):
                     if not ret:
                         with open('videos_saved/log_results.txt', 'a') as log:
                             log.write(
-                            'processed (ret). Time: {}, camera id: {}\n'.format(
-                                video_name, camera_id))
+                                'processed (ret). Time: {}, camera id: {}\n'.format(
+                                    video_name, camera_id))
                         break
                     t1 = time.time()
                     # lost_ids = counter.return_lost_ids()
@@ -258,7 +256,8 @@ def main(yolo):
                     tracker.predict()
                     tracker.update(detections)
 
-                    cv2.rectangle(frame, (int(door_array[0]), int(door_array[1])), (int(door_array[2]), int(door_array[3])),
+                    cv2.rectangle(frame, (int(door_array[0]), int(door_array[1])),
+                                  (int(door_array[2]), int(door_array[3])),
                                   (23, 158, 21), 3)
                     if len(detections) != 0:
                         counter.someone_inframe()
@@ -266,7 +265,8 @@ def main(yolo):
                             bbox = det.to_tlbr()
                             if show_detections and len(classes) > 0:
                                 score = "%.2f" % (det.confidence * 100) + "%"
-                                cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 3)
+                                cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
+                                              (255, 0, 0), 3)
                     else:
                         if counter.need_to_clear():
                             counter.clear_all()
@@ -293,7 +293,8 @@ def main(yolo):
                         counter.cur_bbox[track.track_id] = bbox
 
                         adc = "%.2f" % (track.adc * 100) + "%"  # Average detection confidence
-                        cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 2)
+                        cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
+                                      (255, 255, 255), 2)
                         cv2.putText(frame, "ID: " + str(track.track_id), (int(bbox[0]), int(bbox[1]) + 50), 0,
                                     1e-3 * frame.shape[0], (0, 255, 0), 3)
 
@@ -312,23 +313,21 @@ def main(yolo):
                         ratio = 0
                         cur_c = find_centroid(counter.cur_bbox[val])
                         init_c = find_centroid(counter.people_bbox[val])
-                        vector_person = (cur_c[0] - init_c[0],
-                                         cur_c[1] - init_c[1])
 
                         if val in id_get_lost and counter.people_init[val] != -1:
                             ratio = find_ratio_ofbboxes(bbox=counter.cur_bbox[val], rect_compare=rect_door)
 
-                            if vector_person[1] > 50 and counter.people_init[val] == 2 \
+                            if counter.people_init[val] == 2 \
                                     and ratio < 0.6:  # and counter.people_bbox[val][3] > border_door \
                                 counter.get_out()
                                 save_video_flag = True
-                                print(vector_person[1], counter.people_init[val], ratio)
+                                print(counter.people_init[val], ratio)
 
-                            elif vector_person[1] < -50 and counter.people_init[val] == 1 \
+                            elif counter.people_init[val] == 1 \
                                     and ratio >= 0.6:
                                 counter.get_in()
                                 save_video_flag = True
-                                print(vector_person[1], counter.people_init[val], ratio)
+                                print(counter.people_init[val], ratio)
 
                             counter.people_init[val] = -1
 

@@ -4,20 +4,21 @@ Class definition of YOLO_v4 style detection model on image and video
 """
 
 import colorsys
+import os
+
+# from keras.backend.tensorflow_backend import get_session
+import numpy as np
 import tensorflow as tf
 from tensorflow.compat.v1.keras import backend as K
-#from keras.backend.tensorflow_backend import get_session
-from tensorflow.compat.v1.keras.backend import get_session
-import numpy as np
-#from keras import backend as K
-
 from tensorflow.keras.models import load_model
 
 from yolo4.model import yolo_eval, Mish
 from yolo4.utils import letterbox_image
-import os
-#from keras.utils import multi_gpu_model
-#from tensorflow.keras.utils import multi_gpu_model
+
+
+# from keras import backend as K
+# from keras.utils import multi_gpu_model
+# from tensorflow.keras.utils import multi_gpu_model
 
 
 class YOLO(object):
@@ -70,19 +71,19 @@ class YOLO(object):
         np.random.seed(None)  # Reset seed to default.
 
         # Generate output tensor targets for filtered bounding boxes.
-        self.input_image_shape = K.placeholder(shape=(2, ))
-        #if self.gpu_num>=2:
-            #self.yolo_model = multi_gpu_model(self.yolo_model, gpus=self.gpu_num)
+        self.input_image_shape = K.placeholder(shape=(2,))
+        # if self.gpu_num>=2:
+        # self.yolo_model = multi_gpu_model(self.yolo_model, gpus=self.gpu_num)
         boxes, scores, classes = yolo_eval(self.yolo_model.output, self.anchors,
-                len(self.class_names), self.input_image_shape,
-                score_threshold=self.score, iou_threshold=self.iou)
+                                           len(self.class_names), self.input_image_shape,
+                                           score_threshold=self.score, iou_threshold=self.iou)
         return boxes, scores, classes
 
     def detect_image(self, image):
 
         if self.is_fixed_size:
-            assert self.model_image_size[0]%32 == 0, 'Multiples of 32 required'
-            assert self.model_image_size[1]%32 == 0, 'Multiples of 32 required'
+            assert self.model_image_size[0] % 32 == 0, 'Multiples of 32 required'
+            assert self.model_image_size[1] % 32 == 0, 'Multiples of 32 required'
             boxed_image = letterbox_image(image, tuple(reversed(self.model_image_size)))
         else:
             new_image_size = (image.width - (image.width % 32),
