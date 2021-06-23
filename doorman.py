@@ -240,7 +240,7 @@ def main(yolo):
                     t1 = time.time()
                     # lost_ids = counter.return_lost_ids()
                     image = Image.fromarray(frame[..., ::-1])  # bgr to rgb
-                    image = image.crop(around_door_array)
+                    # image = image.crop(around_door_array)
                     boxes, confidence, classes = yolo.detect_image(image)
 
                     features = encoder(frame, boxes)
@@ -379,8 +379,9 @@ def main(yolo):
                 else:
                     if out.isOpened():
                         out.release()
-                        if os.path.exists(output_name):
-                            os.remove(output_name)
+                        # if os.path.exists(output_name):
+                        #     os.remove(output_name)
+
                 # if os.path.exists(full_video_path):
                 #     os.remove(full_video_path)
                 # if os.path.exists(meta_name):
