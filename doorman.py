@@ -224,7 +224,6 @@ def main(yolo):
                 #  loop over video
                 save_video_flag = False
                 while True:
-
                     fps_imutils = imutils.video.FPS().start()
                     ret, frame = video_capture.read()
                     if not ret:
