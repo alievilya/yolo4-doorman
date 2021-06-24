@@ -22,17 +22,21 @@ from yolo4.utils import letterbox_image
 
 
 class YOLO(object):
-    def __init__(self):
-        self.model_path = 'model_data/yolo4_weight_320.h5'
-        self.anchors_path = 'model_data/yolo_anchors.txt'
-        self.classes_path = 'model_data/coco_classes.txt'
-        self.gpu_num = 1
-        self.score = 0.4
-        self.iou = 0.5
+    def __init__(self, model_path='model_data/yolo4_weight_320.h5',
+                 anchors_path='model_data/yolo_anchors.txt',
+                 classes_path='model_data/coco_classes.txt',
+                 gpu_num=1, score=0.4, iou=0.5,
+                 model_image_size=(320, 320)):
+        self.model_path = model_path
+        self.anchors_path = anchors_path
+        self.classes_path = classes_path
+        self.gpu_num = gpu_num
+        self.score = score
+        self.iou = iou
+        self.model_image_size = model_image_size  # fixed size or (None, None)
         self.class_names = self._get_class()
         self.anchors = self._get_anchors()
         self.sess = tf.compat.v1.keras.backend.get_session()
-        self.model_image_size = (320, 320)  # fixed size or (None, None)
         self.is_fixed_size = self.model_image_size != (None, None)
         self.boxes, self.scores, self.classes = self.generate()
 

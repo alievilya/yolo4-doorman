@@ -84,7 +84,7 @@ class MoveDetector():
             # continue
             return False
         # Resize and save a greyscale version of the image
-        self.frame = imutils.resize(self.frame, width=640)
+        self.frame = imutils.resize(self.frame, width=1280)
         self.gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
         # Blur it to remove camera noise (reducing false positives)
         self.gray = cv2.GaussianBlur(self.gray, (17, 17), 0)
@@ -104,7 +104,7 @@ class MoveDetector():
         self.frame_delta = cv2.absdiff(self.first_frame, self.next_frame)
         thresh = cv2.threshold(self.frame_delta, 20, 255, cv2.THRESH_BINARY)[1]
         thresh = cv2.dilate(thresh, None, iterations=4)
-        _, cnts, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # loop over the contours
         moving_cnts = []
@@ -149,8 +149,8 @@ if __name__ == "__main__":
         config = json.load(config_file)
 
     Motion = [MoveDetector() for _ in range(1)]
-    # link ="rtsp://admin:admin@192.168.1.18:554/1/h264major"
-    link = config["source"]
+    link ="rtsp://admin:admin@192.168.1.52:554/1/h264major"
+    # link = config["source"]
     print('opening link: ', link)
     cap = cv2.VideoCapture(link)  # Then start the webcam
     ret = True
@@ -182,15 +182,15 @@ if __name__ == "__main__":
             # if ch & 0xFF == ord('q'):
             #     break
         delta_time = (time.time() - t0)
-        if len(fpeses) < 35:
-            fpeses.append(round(1 / delta_time))
-            print(delta_time)
-        elif len(fpeses) == 35:
-            # fps = round(np.median(np.array(fpeses)))
-            median_fps = float(np.median(np.array(fpeses)))
-            fps = round(median_fps, 2)
-            print('fps set: ', fps)
-            fpeses.append(fps)
+        # if len(fpeses) < 35:
+        #     fpeses.append(round(1 / delta_time))
+        #     print(delta_time)
+        # elif len(fpeses) == 35:
+        #     # fps = round(np.median(np.array(fpeses)))
+        #     median_fps = float(np.median(np.array(fpeses)))
+        #     fps = round(median_fps, 2)
+        #     print('fps set: ', fps)
+        #     fpeses.append(fps)
 
         if not ret:
             break

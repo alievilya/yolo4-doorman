@@ -53,12 +53,12 @@ class MoveDetector():
                                           self.around_door_array[2], self.around_door_array[3])
 
     def read_cap(self):
-        if self.cap.isOpened():
-            self.ret, self.frame = self.cap.read()
+        if not self.cap:
+            self.cap = cv2.VideoCapture(self.link)
+        self.ret, self.frame = self.cap.read()
 
     def set_init(self):
         self.read_cap()
-        self.load_doors()
         self.transient_movement_flag = False
         self.stop_writing = False
         # Read frame
@@ -73,7 +73,7 @@ class MoveDetector():
         if self.output_video:
             if self.output_video.isOpened():
                 self.output_video.write(self.frame)
-                print('writing')
+                print('writing', self.link)
 
     def gen_meta(self):
         self.meta_file["camera_id"] = self.camera_id
@@ -91,7 +91,6 @@ class MoveDetector():
 
     def release_video(self, frame):
         if self.output_video:
-            # if self.output_video.isOpened():
             self.output_video.write(frame)
             self.output_video.release()
             self.write_meta()
@@ -175,18 +174,15 @@ class MoveDetector():
 
     def loop_detection(self):
         # print('opening link: ', self.link)
-
         while True:
             t0 = time.time()
-            # print('opening link: ', self.link)
             if self.cap is None:
                 self.cap = cv2.VideoCapture(self.link)  # start the cam
-                # self.cap = VideoCaptureAsync(self.link)
+                self.load_doors()
             self.set_init()
-            # print(self.frame.shape)
             if not self.ret:
-                print('error: ret is None')
-                # continue
+                self.cap = cv2.VideoCapture(self.link)  # start the cam
+                print('error. Channel {} is dead'.format(self.link))
                 break
             self.detect_movement(config=config)
 
@@ -195,7 +191,7 @@ class MoveDetector():
                     hour_greenwich = strftime("%H", gmtime())
                     # f'{self.link}_' +
                     hour_moscow = str(int(hour_greenwich) + 3)
-                    self.video_name = hour_moscow + strftime("_%M_%S", gmtime()) + '.mp4'
+                    self.video_name = self.camera_id + '_' + hour_moscow + strftime("_%M_%S", gmtime()) + '.mp4'
                 output_name = 'data_files/videos_motion/' + self.video_name
                 self.start_video(self.frame, output_name)
 
@@ -235,19 +231,6 @@ if __name__ == "__main__":
                     print(f"{Motion[i].link} is alive")
             for ch in channels:
                 ch.join()
-
-            # delta_time = (time.time() - t0)
-            # fps = round(1 / delta_time)
-            # print('fps = ', fps)
-            # if len(fpeses) < 35:
-            #     fpeses.append(fps)
-            #     print(delta_time)
-            # elif len(fpeses) == 35:
-            #     # fps = round(np.median(np.array(fpeses)))
-            #     median_fps = float(np.median(np.array(fpeses)))
-            #     fps = round(median_fps, 2)
-            #     print('fps set: ', fps)
-            #     fpeses.append(fps)
 
     # Cleanup when closed
     # cv2.destroyAllWindows()

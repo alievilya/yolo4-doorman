@@ -2,13 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division, print_function, absolute_import
-
 import json
-import os
-import socket
+
 import warnings
 from collections import OrderedDict
-from collections import deque
 from os.path import join
 from timeit import time
 
@@ -16,16 +13,21 @@ import cv2
 import imutils.video
 import numpy as np
 import tensorflow as tf
+import socket
+
 from PIL import Image
+from collections import deque
 
 from deep_sort import nn_matching
 from deep_sort import preprocessing
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
-from rectangles import find_centroid, Rectangle, find_ratio_ofbboxes
+from rectangles import find_centroid, Rectangle, find_ratio_ofbboxes, rect_square
 from tools import generate_detections as gdet
 from videocaptureasync import VideoCaptureAsync
 from yolo import YOLO
+
+import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -150,6 +152,7 @@ def main(yolo):
     model_filename = detect_config["tracking_model"]
     input_folder, output_folder = detect_config["input_folder"], detect_config["output_folder"]
     meta_folder = detect_config["meta_folder"]
+    output_format = detect_config["output_format"]
 
     # Deep SORT
     max_cosine_distance = 0.3
@@ -157,13 +160,8 @@ def main(yolo):
     nms_max_overlap = 1.0
     encoder = gdet.create_box_encoder(model_filename, batch_size=1)
     metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
-    tracker = Tracker(metric)
-
     show_detections = True
-    save_video_flag = False
     asyncVideo_flag = False
-    fps = 0.0
-    # fpeses = []
 
     check_gpu()
 
@@ -186,10 +184,11 @@ def main(yolo):
                 for video_motion in video_motion_list:
                     videos_que.append(video_motion)
                 video_name = videos_que.popleft()
-                if not video_name.endswith('.mp4'):
+
+                if not video_name.endswith(output_format):
                     continue
-                # video_name = 'test1.mp4'
-                output_format = '.mp4'
+
+                print('elements in que', len(videos_que))
                 print("opening video: {}".format(video_name))
                 full_video_path = join(input_folder, video_name)
                 # full_video_path = "rtsp://admin:admin@192.168.1.52:554/1/h264major"
@@ -203,17 +202,15 @@ def main(yolo):
 
                 output_name = output_folder + camera_id + '/out_' + video_name
                 counter = Counter(counter_in=0, counter_out=0, track_id=0)
+                tracker = Tracker(metric)
 
                 if asyncVideo_flag:
                     video_capture = VideoCaptureAsync(full_video_path)
-                else:
-                    video_capture = cv2.VideoCapture(full_video_path)
-
-                if asyncVideo_flag:
                     video_capture.start()
                     w = int(video_capture.cap.get(3))
                     h = int(video_capture.cap.get(4))
                 else:
+                    video_capture = cv2.VideoCapture(full_video_path)
                     w = int(video_capture.get(3))
                     h = int(video_capture.get(4))
 
@@ -225,15 +222,16 @@ def main(yolo):
                 rect_door = Rectangle(door_array[0], door_array[1], door_array[2], door_array[3])
                 border_door = door_array[3]
                 #  loop over video
+                save_video_flag = False
                 while True:
-                    save_video_flag = False
+
                     fps_imutils = imutils.video.FPS().start()
                     ret, frame = video_capture.read()
                     if not ret:
                         with open('videos_saved/log_results.txt', 'a') as log:
                             log.write(
-                                'processed (ret). Time: {}, camera id: {}\n'.format(
-                                    video_name, camera_id))
+                            'processed (ret). Time: {}, camera id: {}\n'.format(
+                                video_name, camera_id))
                         break
                     t1 = time.time()
                     # lost_ids = counter.return_lost_ids()
@@ -256,8 +254,7 @@ def main(yolo):
                     tracker.predict()
                     tracker.update(detections)
 
-                    cv2.rectangle(frame, (int(door_array[0]), int(door_array[1])),
-                                  (int(door_array[2]), int(door_array[3])),
+                    cv2.rectangle(frame, (int(door_array[0]), int(door_array[1])), (int(door_array[2]), int(door_array[3])),
                                   (23, 158, 21), 3)
                     if len(detections) != 0:
                         counter.someone_inframe()
@@ -265,8 +262,7 @@ def main(yolo):
                             bbox = det.to_tlbr()
                             if show_detections and len(classes) > 0:
                                 score = "%.2f" % (det.confidence * 100) + "%"
-                                cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
-                                              (255, 0, 0), 3)
+                                cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 0, 0), 3)
                     else:
                         if counter.need_to_clear():
                             counter.clear_all()
@@ -293,8 +289,7 @@ def main(yolo):
                         counter.cur_bbox[track.track_id] = bbox
 
                         adc = "%.2f" % (track.adc * 100) + "%"  # Average detection confidence
-                        cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])),
-                                      (255, 255, 255), 2)
+                        cv2.rectangle(frame, (int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])), (255, 255, 255), 2)
                         cv2.putText(frame, "ID: " + str(track.track_id), (int(bbox[0]), int(bbox[1]) + 50), 0,
                                     1e-3 * frame.shape[0], (0, 255, 0), 3)
 
@@ -313,22 +308,18 @@ def main(yolo):
                         ratio = 0
                         cur_c = find_centroid(counter.cur_bbox[val])
                         init_c = find_centroid(counter.people_bbox[val])
-
                         if val in id_get_lost and counter.people_init[val] != -1:
                             ratio = find_ratio_ofbboxes(bbox=counter.cur_bbox[val], rect_compare=rect_door)
-
                             if counter.people_init[val] == 2 \
                                     and ratio < 0.6:  # and counter.people_bbox[val][3] > border_door \
                                 counter.get_out()
                                 save_video_flag = True
                                 print(counter.people_init[val], ratio)
-
                             elif counter.people_init[val] == 1 \
                                     and ratio >= 0.6:
                                 counter.get_in()
                                 save_video_flag = True
                                 print(counter.people_init[val], ratio)
-
                             counter.people_init[val] = -1
 
                     ins, outs = counter.return_counter()
@@ -336,16 +327,13 @@ def main(yolo):
                                   (0, 0, 0), -1, 8)
                     cv2.putText(frame, "in: {}, out: {} ".format(ins, outs), (frame.shape[1] - 140, 20), 0,
                                 1e-3 * frame.shape[0], (255, 255, 255), 3)
-
-                    # cv2.namedWindow('video33', cv2.WINDOW_NORMAL)
-                    # cv2.resizeWindow('video', 1422, 800)
-                    # cv2.imshow('video33', frame)
                     out.write(frame)
-
                     fps_imutils.update()
                     if not asyncVideo_flag:
-                        fps = (fps + (1. / (time.time() - t1))) / 2
-                        print("FPS = %f" % fps)
+                        pass
+                        # fps = (1. / (time.time() - t1))
+                        # print("FPS = %f" % fps)
+
 
                         # if len(fpeses) < 15:
                         #     fpeses.append(round(fps, 2))
@@ -378,13 +366,13 @@ def main(yolo):
                 else:
                     if out.isOpened():
                         out.release()
-                        # if os.path.exists(output_name):
-                        #     os.remove(output_name)
+                        if os.path.isfile(output_name):
+                            os.remove(output_name)
 
-                # if os.path.exists(full_video_path):
-                #     os.remove(full_video_path)
-                # if os.path.exists(meta_name):
-                #     os.remove(meta_name)
+                if os.path.isfile(full_video_path):
+                    os.remove(full_video_path)
+                if os.path.isfile(meta_name):
+                    os.remove(meta_name)
                 save_video_flag = False
                 cv2.destroyAllWindows()
 
@@ -392,5 +380,20 @@ def main(yolo):
 if __name__ == '__main__':
     tf.debugging.set_log_device_placement(True)
     gpus = tf.config.list_logical_devices('GPU')
+    model_input_size = 320
+    model_image_size = (model_input_size, model_input_size)
+    model_path = 'model_data/yolo4_weight_{}.h5'.format(model_input_size)
+    anchors_path = 'model_data/yolo_anchors.txt'
+    classes_path = 'model_data/coco_classes.txt'
+    for path_dir in [model_path, anchors_path, classes_path]:
+        assert os.path.exists(path_dir), "provide a correct path to model_data files"
+    gpu_num = 1
+    score = 0.4
+    iou = 0.5
+
     with tf.device(gpus[0].name):
-        main(YOLO())
+        main(YOLO(model_path=model_path,
+                 anchors_path=anchors_path,
+                 classes_path=classes_path,
+                 gpu_num=gpu_num, score=score, iou=iou,
+                 model_image_size=model_image_size))
